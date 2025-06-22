@@ -26,10 +26,22 @@ const SignInScreen = ({ navigation }) => {
 
     setIsLoading(true);
     try {
-      // For now, just navigate to main app
-      // In a real app, you'd validate credentials here
-      console.log('Signing in with:', email);
-      navigation.navigate('MainApp');
+      // Mock login - accept any email/password combination
+      console.log('Mock signing in with:', email);
+      
+      // Simulate a brief loading delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      Alert.alert(
+        'Success!',
+        `Welcome ${email}! Mock login successful.`,
+        [
+          {
+            text: 'Continue',
+            onPress: () => navigation.navigate('MainApp')
+          }
+        ]
+      );
     } catch (error) {
       Alert.alert('Error', 'Sign in failed. Please try again.');
     } finally {
@@ -40,38 +52,43 @@ const SignInScreen = ({ navigation }) => {
   const handleLinkedInSignIn = async () => {
     setIsLinkedInLoading(true);
     try {
-      console.log('🔐 Starting LinkedIn authentication...');
+      console.log('🔐 Starting mock LinkedIn authentication...');
       
-      // Try to get LinkedIn profile
-      const result = await getLinkedInProfile();
+      // Simulate LinkedIn authentication delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
-      if (result.success) {
-        console.log('✅ LinkedIn authentication successful!');
-        console.log('Profile data:', result.profile);
-        
-        Alert.alert(
-          'Success!',
-          `Welcome ${result.profile.firstName} ${result.profile.lastName}!`,
-          [
-            {
-              text: 'Continue',
-              onPress: () => navigation.navigate('MainApp')
-            }
-          ]
-        );
-      } else {
-        console.log('❌ LinkedIn authentication failed:', result.error);
-        Alert.alert(
-          'LinkedIn Authentication Failed',
-          result.error || 'Unable to authenticate with LinkedIn. Please try again.',
-          [{ text: 'OK' }]
-        );
-      }
+      // Mock successful LinkedIn authentication
+      const mockProfile = {
+        id: 'mock-linkedin-id',
+        firstName: 'John',
+        lastName: 'Doe',
+        headline: 'Software Engineer at Berkeley',
+        industry: 'Technology',
+        location: 'San Francisco Bay Area',
+        summary: 'Passionate software engineer with experience in React Native, Python, and machine learning. Currently studying Computer Science at UC Berkeley.',
+        profilePicture: 'https://picsum.photos/200/200?random=1',
+        email: 'john.doe@berkeley.edu',
+        fetchedAt: new Date().toISOString()
+      };
+      
+      console.log('✅ Mock LinkedIn authentication successful!');
+      console.log('Mock profile data:', mockProfile);
+      
+      Alert.alert(
+        'Success!',
+        `Welcome ${mockProfile.firstName} ${mockProfile.lastName}! Mock LinkedIn authentication successful.`,
+        [
+          {
+            text: 'Continue',
+            onPress: () => navigation.navigate('MainApp')
+          }
+        ]
+      );
     } catch (error) {
-      console.error('❌ Error during LinkedIn sign in:', error);
+      console.error('❌ Error during mock LinkedIn sign in:', error);
       Alert.alert(
         'Error',
-        'An unexpected error occurred during LinkedIn authentication.',
+        'An unexpected error occurred during mock LinkedIn authentication.',
         [{ text: 'OK' }]
       );
     } finally {

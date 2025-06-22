@@ -37,7 +37,7 @@ const ProfileScreen = ({ navigation }) => {
   const loadProfileData = async () => {
     try {
       setIsLoading(true);
-      console.log('📊 Loading LinkedIn profile data...');
+      console.log('📊 Loading profile data...');
       
       // First try to get stored profile data
       const storedResult = await getStoredLinkedInProfile();
@@ -46,31 +46,41 @@ const ProfileScreen = ({ navigation }) => {
         console.log('✅ Found stored LinkedIn profile');
         setProfileData(storedResult.profile);
       } else {
-        console.log('❌ No stored profile found, using mock data');
-        // Fallback to mock data if no LinkedIn profile
-        setProfileData({
+        console.log('❌ No stored profile found, using mock profile data');
+        // Use mock profile data for testing
+        const mockProfileData = {
+          id: 'mock-profile-id',
+          firstName: 'John',
+          lastName: 'Doe',
           name: 'John Doe',
-          title: 'React Native Developer',
-          profilePicture: 'https://via.placeholder.com/160',
-          secondaryPicture: 'https://via.placeholder.com/80',
-          connectionsPicture: 'https://via.placeholder.com/60',
-          email: 'john.doe@example.com',
+          title: 'Software Engineer at Berkeley',
+          headline: 'Software Engineer at Berkeley',
+          profilePicture: 'https://picsum.photos/200/200?random=1',
+          secondaryPicture: 'https://picsum.photos/80/80?random=2',
+          connectionsPicture: 'https://picsum.photos/60/60?random=3',
+          email: 'john.doe@berkeley.edu',
           industry: 'Technology',
-          location: 'San Francisco, CA',
-          summary: 'Passionate developer with experience in React Native and mobile development.',
+          location: 'San Francisco Bay Area',
+          summary: 'Passionate software engineer with experience in React Native, Python, and machine learning. Currently studying Computer Science at UC Berkeley and working on innovative mobile applications.',
           experience: [
-            { id: 1, logo: 'https://via.placeholder.com/60', text: 'Software Engineer at Company A' },
-            { id: 2, logo: 'https://via.placeholder.com/60', text: 'Frontend Developer at Company B' },
-            { id: 3, logo: 'https://via.placeholder.com/60', text: 'Intern at Company C' },
+            { id: 1, logo: 'https://picsum.photos/60/60?random=4', text: 'Software Engineer Intern at Google' },
+            { id: 2, logo: 'https://picsum.photos/60/60?random=5', text: 'Full Stack Developer at Berkeley Startup' },
+            { id: 3, logo: 'https://picsum.photos/60/60?random=6', text: 'Research Assistant at UC Berkeley' },
           ],
           education: [
-            { id: 1, logo: 'https://via.placeholder.com/60', text: 'B.S. in Computer Science' },
-          ]
-        });
+            { id: 1, logo: 'https://picsum.photos/60/60?random=7', text: 'B.S. in Computer Science at UC Berkeley' },
+            { id: 2, logo: 'https://picsum.photos/60/60?random=8', text: 'High School Diploma at Berkeley High' },
+          ],
+          skills: ['React Native', 'Python', 'JavaScript', 'Machine Learning', 'Node.js', 'AWS', 'Git'],
+          connections: 450,
+          fetchedAt: new Date().toISOString()
+        };
+        setProfileData(mockProfileData);
       }
     } catch (error) {
       console.error('❌ Error loading profile data:', error);
       Alert.alert('Error', 'Failed to load profile data. Please try again.');
+      setProfileData(null);
     } finally {
       setIsLoading(false);
     }
@@ -172,24 +182,24 @@ const ProfileScreen = ({ navigation }) => {
           />
         }
       >
-        {/* LinkedIn Connection Status */}
-        {!isLinkedInProfile && (
-          <View style={styles.linkedinPrompt}>
-            <Text style={styles.linkedinPromptText}>
-              🔗 Connect your LinkedIn profile to see your real data
-            </Text>
-            <TouchableOpacity style={styles.connectButton} onPress={connectLinkedIn}>
-              <Text style={styles.connectButtonText}>Connect LinkedIn</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
         {/* Profile Status Indicator */}
         {isLinkedInProfile && (
           <View style={styles.linkedinStatus}>
             <Text style={styles.linkedinStatusText}>
-              ✅ Connected to LinkedIn • Last updated: {new Date(profileData.fetchedAt).toLocaleDateString()}
+              ✅ Mock Profile Active • Last updated: {new Date(profileData.fetchedAt).toLocaleDateString()}
             </Text>
+          </View>
+        )}
+
+        {/* Mock Profile Notice */}
+        {!isLinkedInProfile && (
+          <View style={styles.linkedinPrompt}>
+            <Text style={styles.linkedinPromptText}>
+              🎭 Mock Profile Mode • Using sample data for testing
+            </Text>
+            <TouchableOpacity style={styles.connectButton} onPress={connectLinkedIn}>
+              <Text style={styles.connectButtonText}>Try Real LinkedIn</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -221,16 +231,16 @@ const ProfileScreen = ({ navigation }) => {
             <Text style={styles.titleText}>
               {isLinkedInProfile ? profileData.headline : profileData.title}
             </Text>
-            {isLinkedInProfile && profileData.industry && (
+            {profileData.industry && (
               <Text style={styles.industryText}>{profileData.industry}</Text>
             )}
-            {isLinkedInProfile && profileData.location && (
+            {profileData.location && (
               <Text style={styles.locationText}>📍 {profileData.location}</Text>
             )}
         </View>
 
-        {/* LinkedIn Profile Data */}
-        {isLinkedInProfile && profileData.summary && (
+        {/* Profile Summary */}
+        {profileData.summary && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>About</Text>
             <View style={styles.summaryContainer}>
@@ -240,7 +250,7 @@ const ProfileScreen = ({ navigation }) => {
         )}
 
         {/* Contact Information */}
-        {isLinkedInProfile && profileData.email && (
+        {profileData.email && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Contact</Text>
             <View style={styles.contactContainer}>

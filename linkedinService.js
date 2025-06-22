@@ -10,11 +10,8 @@ WebBrowser.maybeCompleteAuthSession();
  * You'll need to set up a LinkedIn app at: https://www.linkedin.com/developers/
  */
 const LINKEDIN_CONFIG = {
-  clientId: 'YOUR_LINKEDIN_CLIENT_ID', // Replace with your LinkedIn app client ID
-  redirectUri: AuthSession.makeRedirectUri({
-    scheme: 'calhacksai',
-    path: 'linkedin-callback'
-  }),
+  clientId: '86w7qwvb426drd', // Your actual LinkedIn Client ID
+  redirectUri: 'http://localhost:3000/linkedin-callback', // Use our callback server
   scopes: ['r_liteprofile', 'r_emailaddress'], // Basic profile and email permissions
   responseType: 'code',
   state: 'random_state_string'
@@ -65,7 +62,7 @@ class LinkedInService {
     try {
       console.log('🔐 Starting LinkedIn OAuth flow...');
       
-      // Create auth request
+      // Create auth request URL
       const authUrl = `${LINKEDIN_API.authUrl}?` +
         `response_type=${LINKEDIN_CONFIG.responseType}&` +
         `client_id=${LINKEDIN_CONFIG.clientId}&` +
@@ -73,27 +70,42 @@ class LinkedInService {
         `scope=${encodeURIComponent(LINKEDIN_CONFIG.scopes.join(' '))}&` +
         `state=${LINKEDIN_CONFIG.state}`;
 
-      // Open browser for authentication
+      console.log('🔗 Auth URL:', authUrl);
+      
+      // Open the auth URL in browser
       const result = await WebBrowser.openAuthSessionAsync(
         authUrl,
         LINKEDIN_CONFIG.redirectUri
       );
 
       if (result.type === 'success') {
-        const { url } = result;
-        const code = this.extractCodeFromUrl(url);
+        console.log('✅ Browser authentication successful');
         
-        if (code) {
-          console.log('✅ LinkedIn OAuth successful, getting access token...');
-          const tokenResult = await this.getAccessToken(code);
-          if (tokenResult) {
-            return { success: true, accessToken: this.accessToken };
+        // Wait a moment for the callback server to receive the code
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Try to get the authorization code from our callback server
+        try {
+          const response = await fetch('http://localhost:3000/get-auth-code');
+          const data = await response.json();
+          
+          if (data.success && data.code) {
+            console.log('✅ Authorization code retrieved from callback server');
+            const tokenResult = await this.getAccessToken(data.code);
+            if (tokenResult) {
+              return { success: true, accessToken: this.accessToken };
+            }
+          } else {
+            console.log('❌ No authorization code available from callback server');
           }
+        } catch (serverError) {
+          console.log('❌ Callback server error:', serverError.message);
+          console.log('💡 Make sure the callback server is running: node linkedinCallbackServer.js');
         }
       }
 
       console.log('❌ LinkedIn OAuth failed or was cancelled');
-      return { success: false, error: 'Authentication failed or cancelled' };
+      return { success: false, error: 'Authentication failed or cancelled. Make sure the callback server is running.' };
 
     } catch (error) {
       console.error('❌ Error during LinkedIn authentication:', error);
@@ -137,7 +149,7 @@ class LinkedInService {
           grant_type: 'authorization_code',
           code: code,
           client_id: LINKEDIN_CONFIG.clientId,
-          client_secret: 'YOUR_LINKEDIN_CLIENT_SECRET', // Replace with your client secret
+          client_secret: 'WPL_AP1.1NTLBjOYTxjKmjBk.2lywUQ==', 
           redirect_uri: LINKEDIN_CONFIG.redirectUri,
         }),
       });

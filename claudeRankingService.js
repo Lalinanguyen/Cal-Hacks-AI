@@ -1,5 +1,6 @@
 import { sendMessageToClaude } from './claudeAPI';
 import { storeClaudeResponse } from './claudeStorageService';
+import { getTopPerformers } from './cleaning.js';
 
 /**
  * Claude AI Ranking Service
@@ -7,19 +8,124 @@ import { storeClaudeResponse } from './claudeStorageService';
  */
 
 /**
+ * Extracts ranking information from Claude's text response
+ * @param {string} response - Claude's text response
+ * @returns {Object|null} Extracted ranking object or null
+ */
+const extractRankingFromText = (response) => {
+  try {
+    const lines = response.split('\n');
+    const rankings = [];
+    let currentRank = 0;
+    
+    for (const line of lines) {
+      // Look for ranking patterns like "1. Name", "Rank 1: Name", etc.
+      const rankMatch = line.match(/^(\d+)\.?\s*(.+?)(?:\s*[-:]\s*(.+))?$/i);
+      if (rankMatch) {
+        currentRank++;
+        rankings.push({
+          rank: currentRank,
+          name: rankMatch[2].trim(),
+          score: 0, // Default score
+          reasoning: rankMatch[3] ? rankMatch[3].trim() : '',
+          strengths: [],
+          areas_for_improvement: []
+        });
+      }
+    }
+    
+    if (rankings.length > 0) {
+      return {
+        rankings: rankings,
+        insights: {
+          top_performers: "Analysis extracted from Claude's response",
+          common_patterns: "Patterns identified in the top performers",
+          recommendations: "General recommendations for improvement"
+        }
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.log('Error extracting ranking from text:', error);
+    return null;
+  }
+};
+
+/**
+ * Creates a minimal dataset for Claude API to reduce token usage
+ * @param {Array} students - Array of student objects
+ * @param {Object} userProfile - User profile object
+ * @returns {Array} Minimal dataset with only essential fields
+ */
+const createMinimalDataset = (students, userProfile) => {
+  // Only include top 19 students to reduce token count (reduced from 50)
+  const top19Students = students.slice(0, 19);
+  
+  // Create minimal student objects with only essential fields
+  const minimalStudents = top19Students.map(student => ({
+    name: student.Name || student.name,
+    title: student.Title || '',
+    company: student.Company || '',
+    major: student.Major || '',
+    connections: student.LinkedInConnections || 0,
+    skills: student.Skills || '',
+    score: student.calculatedScore || student.Score || 0,
+    rank: student.rank || student.Rank || 0,
+    experience: student.Experience || '',
+    location: student.Location || ''
+  }));
+  
+  // Add user profile if provided
+  if (userProfile) {
+    const minimalUserProfile = {
+      name: userProfile.Name || userProfile.name,
+      title: userProfile.Title || '',
+      company: userProfile.Company || '',
+      major: userProfile.Major || '',
+      connections: userProfile.LinkedInConnections || 0,
+      skills: userProfile.Skills || '',
+      score: userProfile.calculatedScore || userProfile.Score || 0,
+      rank: userProfile.rank || userProfile.Rank || 0,
+      experience: userProfile.Experience || '',
+      location: userProfile.Location || ''
+    };
+    
+    // Check if user profile is already in the list
+    const userName = minimalUserProfile.name.toLowerCase().trim();
+    const alreadyIncluded = minimalStudents.some(
+      s => (s.name || '').toLowerCase().trim() === userName
+    );
+    
+    if (!alreadyIncluded) {
+      minimalStudents.push(minimalUserProfile);
+    }
+  }
+  
+  return minimalStudents;
+};
+
+/**
  * Sends user data to Claude for ranking analysis
+ * Only sends the top 19 students plus the user's profile (if provided)
  * @param {Array} userData - Array of user objects to rank
+ * @param {Object} [userProfile] - The user's profile object to include
  * @returns {Promise<Object>} Claude's ranking analysis
  */
-export const getClaudeRanking = async (userData) => {
+export const getClaudeRanking = async (userData, userProfile = null) => {
   try {
-    console.log('🤖 Sending data to Claude for ranking analysis...');
+    console.log('🤖 Preparing minimal data for Claude ranking analysis...');
+
+    // Create minimal dataset to reduce token usage
+    const minimalData = createMinimalDataset(userData, userProfile);
     
+    console.log(`📊 Sending ${minimalData.length} students to Claude (minimal data format)`);
+
     const message = `Please analyze and rank these Berkeley Computer Science students based on their professional achievements, experience, and potential. 
 
-Here is the data for ${userData.length} students:
+Here is the data for ${minimalData.length} students:
 
-${JSON.stringify(userData, null, 2)}
+${JSON.stringify(minimalData, null, 2)}
 
 Please provide:
 1. A ranked list from highest to lowest performing student
@@ -62,15 +168,44 @@ Be thorough but concise in your analysis.`;
 
     // Try to parse JSON from Claude's response
     try {
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsedRanking = JSON.parse(jsonMatch[0]);
+      // First, try to find JSON blocks in the response
+      const jsonMatches = response.match(/\{[\s\S]*\}/g);
+      
+      if (jsonMatches) {
+        // Try each potential JSON block
+        for (const jsonMatch of jsonMatches) {
+          try {
+            const parsedRanking = JSON.parse(jsonMatch);
+            
+            // Validate that it has the expected structure
+            if (parsedRanking.rankings && Array.isArray(parsedRanking.rankings)) {
+              console.log('✅ Successfully parsed JSON from Claude response');
+              return {
+                success: true,
+                ranking: parsedRanking,
+                rawResponse: response
+              };
+            }
+          } catch (parseError) {
+            // Continue to next potential JSON block
+            continue;
+          }
+        }
+      }
+      
+      // If no valid JSON found, try to extract key information from text
+      console.log('⚠️ Could not parse JSON from Claude response, attempting to extract ranking info from text');
+      
+      // Try to extract ranking information from the text response
+      const rankingInfo = extractRankingFromText(response);
+      if (rankingInfo) {
         return {
           success: true,
-          ranking: parsedRanking,
+          ranking: rankingInfo,
           rawResponse: response
         };
       }
+      
     } catch (parseError) {
       console.log('⚠️ Could not parse JSON from Claude response, returning raw response');
     }
@@ -182,9 +317,12 @@ Focus on how they can learn from and complement each other.`;
  */
 export const getClaudeIndustryInsights = async (userData) => {
   try {
+    // Create minimal dataset to reduce token usage
+    const minimalData = createMinimalDataset(userData, null);
+    
     const message = `Based on this data from Berkeley Computer Science students, please provide industry insights:
 
-${JSON.stringify(userData, null, 2)}
+${JSON.stringify(minimalData, null, 2)}
 
 Please provide:
 1. Current industry trends reflected in the data

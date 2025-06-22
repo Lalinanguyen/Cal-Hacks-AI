@@ -301,136 +301,81 @@ const calculateSkillsScore = (skills) => {
 };
 
 /**
- * Reads and processes the XLSX data from the specified file path.
+ * Removes duplicates based on name matching
+ */
+const removeDuplicates = (data) => {
+  console.log(`🔄 Starting duplicate removal...`);
+  console.log(`📊 Original data count: ${data.length}`);
+  
+  const uniqueData = [];
+  const seenNames = new Set();
+  const duplicates = [];
+  
+  data.forEach((user, index) => {
+    const name = user.Name || user.name || '';
+    const normalizedName = name.toLowerCase().trim();
+    
+    if (!normalizedName) {
+      console.log(`⚠️ Skipping user at index ${index} - no name found`);
+      return;
+    }
+    
+    if (seenNames.has(normalizedName)) {
+      duplicates.push({
+        index,
+        name: normalizedName,
+        user
+      });
+      console.log(`❌ Duplicate found: "${name}" at index ${index}`);
+    } else {
+      seenNames.add(normalizedName);
+      uniqueData.push(user);
+    }
+  });
+  
+  console.log(`✅ Duplicate removal complete:`);
+  console.log(`   - Original: ${data.length} records`);
+  console.log(`   - Unique: ${uniqueData.length} records`);
+  console.log(`   - Removed: ${duplicates.length} duplicates`);
+  
+  if (duplicates.length > 0) {
+    console.log(`📋 Duplicates removed:`);
+    duplicates.forEach(dup => {
+      console.log(`   - "${dup.name}" (index ${dup.index})`);
+    });
+  }
+  
+  return uniqueData;
+};
+
+/**
+ * Reads and processes the data from berkeleyData.json.
  *
  * @returns {Promise<Array>} A promise that resolves with an array of cleaned, scored, and ranked data objects.
  */
 export const getCleanedData = async () => {
   try {
-    // Try to load the XLSX file
-    console.log('Attempting to load XLSX file...');
+    console.log('Loading data from berkeleyData.json...');
     
-    // In React Native, we load the asset first
-    const asset = Asset.fromModule(require('./ALLCSDATA.xlsx'));
-    await asset.downloadAsync(); // Optional, but ensures it's available
-
-    const response = await fetch(asset.uri);
-    const arrayBuffer = await response.arrayBuffer();
-
-    // Parse the XLSX file
-    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+    // Import the real data from JSON
+    const realData = await import('./berkeleyData.json');
     
-    // Get the first sheet
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
+    if (!realData || !realData.default || realData.default.length === 0) {
+      throw new Error('No data found in berkeleyData.json');
+    }
     
-    // Convert to JSON
-    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+    console.log(`Loaded ${realData.default.length} records from berkeleyData.json`);
     
-    // Extract headers and data
-    const headers = jsonData[0];
-    const dataRows = jsonData.slice(1);
+    // Remove duplicates based on name
+    const uniqueData = removeDuplicates(realData.default);
     
-    // Convert to array of objects
-    const results = dataRows.map(row => {
-      const obj = {};
-      headers.forEach((header, index) => {
-        obj[header] = row[index];
-      });
-      return obj;
-    });
-
-    console.log(`Loaded ${results.length} rows from XLSX file`);
-
-    // --- 1. Remove Duplicates ---
-    const uniqueData = [];
-    const seen = new Set();
-    
-    results.forEach(row => {
-      const identifier = row[DUPLICATE_CHECK_COLUMN];
-      if (identifier && !seen.has(identifier)) {
-        seen.add(identifier);
-        uniqueData.push(row);
-      }
-    });
-
-    console.log(`Removed duplicates: ${results.length} -> ${uniqueData.length} unique entries`);
-
-    // --- 2. Calculate Scores and Rank Users ---
-    const rankedData = rankUsers(uniqueData);
-    
-    console.log('Users ranked by comprehensive score (highest to lowest):');
-    rankedData.slice(0, 10).forEach((user, index) => {
-      const tieIndicator = user.isTie ? ' (TIE)' : '';
-      console.log(`${user.rankBadge} ${user.Name}: ${user.calculatedScore}/100 points${tieIndicator}`);
-    });
-
-    console.log('Data processed and ranked successfully!');
-    return rankedData;
+    // The data is already ranked and scored, so we can return it directly
+    console.log('Data loaded and deduplicated successfully!');
+    return uniqueData;
     
   } catch (error) {
-    console.error('Error reading the XLSX file:', error);
-    console.log('Falling back to mock data with ranking...');
-    
-    // Return mock data as fallback with ranking
-    const mockData = [
-      { 
-        Name: 'John Doe', 
-        Title: 'Software Engineer', 
-        Company: 'Google',
-        Major: 'Computer Science',
-        GraduationYear: '2022',
-        LinkedInConnections: 850,
-        Experience: '3 years',
-        Skills: 'Python, JavaScript, React, Node.js, AWS, Docker'
-      },
-      { 
-        Name: 'Jane Smith', 
-        Title: 'Product Manager', 
-        Company: 'Meta',
-        Major: 'Business Administration',
-        GraduationYear: '2021',
-        LinkedInConnections: 1200,
-        Experience: '4 years',
-        Skills: 'Product Strategy, Analytics, Leadership, SQL, Python'
-      },
-      { 
-        Name: 'Mike Johnson', 
-        Title: 'Data Scientist', 
-        Company: 'Netflix',
-        Major: 'Statistics',
-        GraduationYear: '2023',
-        LinkedInConnections: 450,
-        Experience: '2 years',
-        Skills: 'Python, R, Machine Learning, SQL, TensorFlow'
-      },
-      { 
-        Name: 'Sarah Wilson', 
-        Title: 'UX Designer', 
-        Company: 'Apple',
-        Major: 'Design',
-        GraduationYear: '2020',
-        LinkedInConnections: 650,
-        Experience: '5 years',
-        Skills: 'Figma, User Research, Prototyping, Sketch, InVision'
-      },
-      { 
-        Name: 'David Brown', 
-        Title: 'Marketing Manager', 
-        Company: 'Startup Inc',
-        Major: 'Marketing',
-        GraduationYear: '2019',
-        LinkedInConnections: 300,
-        Experience: '6 years',
-        Skills: 'Digital Marketing, Analytics, Strategy, Google Ads'
-      },
-    ];
-    
-    // Apply ranking to mock data
-    const rankedMockData = rankUsers(mockData);
-    console.log('Mock data ranked successfully!');
-    
-    return rankedMockData;
+    console.error('Error reading berkeleyData.json:', error);
+    throw new Error('Failed to load data from berkeleyData.json. Please ensure the file exists and contains valid data.');
   }
 };
 
