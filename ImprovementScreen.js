@@ -12,6 +12,7 @@ import {
   Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
 
 const TypingIndicator = () => {
   const dot1 = useRef(new Animated.Value(0)).current;
@@ -57,6 +58,7 @@ const TypingIndicator = () => {
 };
 
 const ImprovementScreen = () => {
+  const navigation = useNavigation();
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -110,8 +112,18 @@ const ImprovementScreen = () => {
             keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 25}
         >
             <LinearGradient colors={['#0077b5', '#005582']} style={styles.header}>
-                <Text style={styles.headerTitle}>Cal Career</Text>
-                <Text style={styles.headerSubtitle}>Your professional AI assistant</Text>
+                <View style={styles.headerContent}>
+                    <TouchableOpacity 
+                        style={styles.backButton} 
+                        onPress={() => navigation.goBack()}
+                    >
+                        <Text style={styles.backButtonText}>←</Text>
+                    </TouchableOpacity>
+                    <View style={styles.headerTextContainer}>
+                        <Text style={styles.headerTitle}>Cal Career</Text>
+                        <Text style={styles.headerSubtitle}>Your professional AI assistant</Text>
+                    </View>
+                </View>
             </LinearGradient>
             
             <ScrollView style={styles.messagesContainer} ref={scrollViewRef}>
@@ -264,7 +276,27 @@ const styles = StyleSheet.create({
       height: 8,
       borderRadius: 4,
       backgroundColor: '#0077b5'
-  }
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backButtonText: {
+    color: 'white',
+    fontSize: 20,
+  },
+  headerTextContainer: {
+    flexDirection: 'column',
+    marginLeft: 10,
+  },
 });
 
 export default ImprovementScreen; 

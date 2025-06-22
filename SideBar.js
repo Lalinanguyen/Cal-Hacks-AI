@@ -13,7 +13,7 @@ const SideBar = ({ navigation }) => {
               {/* Profile Picture Placeholder */}
             </TouchableOpacity>
             <View>
-              <Text style={styles.username}>Insert Username</Text>
+              <Text style={styles.username}> UsernameInsert</Text>
               <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
                 <Text style={styles.viewProfile}>view profile</Text>
               </TouchableOpacity>
@@ -35,7 +35,7 @@ const SideBar = ({ navigation }) => {
             <FontAwesome name="question-circle-o" size={24} color="white" style={styles.icon} />
             <Text style={styles.menuText}>Ask Cal Career</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Insights')}>
             <FontAwesome name="lightbulb-o" size={24} color="white" style={styles.icon} />
             <Text style={styles.menuText}>Insights</Text>
           </TouchableOpacity>

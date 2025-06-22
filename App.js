@@ -9,6 +9,7 @@ import ProfileScreen from './ProfileScreen';
 import ImprovementScreen from './ImprovementScreen';
 import SideBar from './SideBar';
 import LeaderboardScreen from './LeaderboardScreen';
+import InsightsScreen from './InsightsScreen';
 
 const Stack = createStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -34,6 +35,11 @@ const MainStackNavigator = () => {
       <Stack.Screen 
         name="Leaderboard" 
         component={LeaderboardScreen} 
+        options={{ headerShown: false }} 
+      />
+      <Stack.Screen 
+        name="Insights" 
+        component={InsightsScreen} 
         options={{ headerShown: false }} 
       />
     </Stack.Navigator>
