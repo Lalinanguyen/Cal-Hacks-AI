@@ -32,20 +32,6 @@ const LeaderboardItem = ({ item, index, isFirst, useClaudeRanking }) => {
     return getRankBadge(index + 1);
   };
 
-  const getDisplayScore = () => {
-    if (useClaudeRanking && item.ClaudeScore) {
-      return item.ClaudeScore;
-    }
-    return item.LinkedInConnections ? Math.floor(item.LinkedInConnections / 10) : Math.floor(Math.random() * 50) + 50;
-  };
-
-  const getScoreLabel = () => {
-    if (useClaudeRanking && item.ClaudeScore) {
-      return 'Claude Score';
-    }
-    return 'Score';
-  };
-
   return (
     <View style={styles.itemContainer}>
       <View style={styles.rankContainer}>
@@ -91,18 +77,6 @@ const LeaderboardItem = ({ item, index, isFirst, useClaudeRanking }) => {
         {useClaudeRanking && item.ClaudeStrengths && item.ClaudeStrengths.length > 0 && (
           <Text style={styles.claudeStrengthsText} numberOfLines={1}>
             ✅ {item.ClaudeStrengths.slice(0, 2).join(', ')}
-          </Text>
-        )}
-      </View>
-      
-      <View style={styles.scoreContainer}>
-        <Text style={styles.scoreText}>
-          {getDisplayScore()}
-        </Text>
-        <Text style={styles.scoreLabel}>{getScoreLabel()}</Text>
-        {useClaudeRanking && item.ClaudeScore && (
-          <Text style={styles.originalScoreText}>
-            Original: {item.LinkedInConnections ? Math.floor(item.LinkedInConnections / 10) : Math.floor(Math.random() * 50) + 50}
           </Text>
         )}
       </View>
@@ -407,9 +381,8 @@ const LeaderboardScreen = ({ navigation }) => {
             <View style={styles.statsContainer}>
               <Text style={styles.statsTitle}>📈 Leaderboard Statistics</Text>
               <Text style={styles.statsText}>
-                Total Students: {displayData.length} • 
-                Average Score: {Math.round(displayData.reduce((sum, item) => sum + (item.Score || 0), 0) / displayData.length)}
-                {useClaudeRanking && ` • Claude Average: ${Math.round(displayData.reduce((sum, item) => sum + (item.ClaudeScore || 0), 0) / displayData.length)}`}
+                Total Students: {displayData.length}
+                {useClaudeRanking && ' • Claude AI Ranked'}
               </Text>
             </View>
 

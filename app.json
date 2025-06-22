@@ -9,14 +9,22 @@
       "**/*",
       "*.xlsx"
     ],
+    "scheme": "calhacksai",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.calhacksai.app"
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF"
-      }
+      },
+      "package": "com.calhacksai.app"
     },
-    "web": {}
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-web-browser"
+    ]
   }
 } 
