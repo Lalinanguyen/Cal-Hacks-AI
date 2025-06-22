@@ -1,33 +1,59 @@
+import 'react-native-gesture-handler';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import { createDrawerNavigator } from '@react-navigation/drawer';
 
-export default function App() {
+import SignInScreen from './SignInScreen';
+import ProfileScreen from './ProfileScreen';
+import ImprovementScreen from './ImprovementScreen';
+import SideBar from './SideBar';
+import LeaderboardScreen from './LeaderboardScreen';
+
+const Stack = createStackNavigator();
+const Drawer = createDrawerNavigator();
+
+const MainStackNavigator = () => {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Welcome to Expo Go!</Text>
-      <Text style={styles.subtitle}>Your React Native app is running</Text>
-      <StatusBar style="auto" />
-    </View>
+    <Stack.Navigator initialRouteName="SignIn">
+      <Stack.Screen 
+        name="SignIn" 
+        component={SignInScreen} 
+        options={{ headerShown: false }} 
+      />
+      <Stack.Screen 
+        name="Profile" 
+        component={ProfileScreen} 
+        options={{ title: 'Profile' }}
+      />
+      <Stack.Screen 
+        name="Improvement" 
+        component={ImprovementScreen} 
+        options={{ headerShown: false }} 
+      />
+      <Stack.Screen 
+        name="Leaderboard" 
+        component={LeaderboardScreen} 
+        options={{ headerShown: false }} 
+      />
+    </Stack.Navigator>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#333',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-  },
-}); 
+export default function App() {
+  return (
+    <NavigationContainer>
+      <Drawer.Navigator 
+        drawerContent={props => <SideBar {...props} />}
+        screenOptions={{
+          headerShown: false,
+          drawerStyle: {
+            width: '80%',
+          }
+        }}
+      >
+        <Drawer.Screen name="Main" component={MainStackNavigator} />
+      </Drawer.Navigator>
+    </NavigationContainer>
+  );
+}
