@@ -50,6 +50,8 @@ const RootNavigator = () => {
         component={MainAppNavigator} 
         options={{ headerShown: false }} 
       />
+      <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
+      <Stack.Screen name="OtherProfileScreen" component={ProfileScreen} />
     </Stack.Navigator>
   );
 };
