@@ -1,0 +1,57 @@
+[
+  {
+    "Name": "John Doe",
+    "Title": "Software Engineer",
+    "Company": "Tech Corp",
+    "Major": "Computer Science",
+    "GraduationYear": "2024",
+    "LinkedInConnections": 500,
+    "Experience": "2 years",
+    "Skills": "Python, JavaScript, React",
+    "Location": "San Francisco, CA"
+  },
+  {
+    "Name": "Jane Smith",
+    "Title": "Product Manager",
+    "Company": "Startup Inc",
+    "Major": "Business Administration",
+    "GraduationYear": "2023",
+    "LinkedInConnections": 750,
+    "Experience": "3 years",
+    "Skills": "Product Strategy, Analytics, Leadership",
+    "Location": "Oakland, CA"
+  },
+  {
+    "Name": "Mike Johnson",
+    "Title": "Data Scientist",
+    "Company": "AI Labs",
+    "Major": "Statistics",
+    "GraduationYear": "2024",
+    "LinkedInConnections": 300,
+    "Experience": "1 year",
+    "Skills": "Python, R, Machine Learning",
+    "Location": "Berkeley, CA"
+  },
+  {
+    "Name": "Sarah Wilson",
+    "Title": "UX Designer",
+    "Company": "Design Studio",
+    "Major": "Design",
+    "GraduationYear": "2023",
+    "LinkedInConnections": 450,
+    "Experience": "2 years",
+    "Skills": "Figma, User Research, Prototyping",
+    "Location": "San Jose, CA"
+  },
+  {
+    "Name": "David Brown",
+    "Title": "Marketing Manager",
+    "Company": "Marketing Co",
+    "Major": "Marketing",
+    "GraduationYear": "2022",
+    "LinkedInConnections": 600,
+    "Experience": "4 years",
+    "Skills": "Digital Marketing, Analytics, Strategy",
+    "Location": "Los Angeles, CA"
+  }
+]

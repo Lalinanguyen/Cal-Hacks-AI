@@ -10,8 +10,12 @@ import {
   Platform,
   SafeAreaView,
   Animated,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
+import { sendMessageToClaude, generateRecommendations } from './claudeService';
+import { getCleanedData } from './dataService';
 
 const TypingIndicator = () => {
   const dot1 = useRef(new Animated.Value(0)).current;
@@ -57,18 +61,33 @@ const TypingIndicator = () => {
 };
 
 const ImprovementScreen = () => {
+  const navigation = useNavigation();
   const [messages, setMessages] = useState([
     {
       id: 1,
-      text: "Hello! I'm your Cal Career assistant. I can help you with networking, career advice, content creation, and professional insights. Let me help you rank up!",
+      text: "Hello! I'm your Cal Career assistant powered by Claude AI. I can help you with networking, career advice, content creation, and professional insights. Let me help you rank up!",
       sender: 'assistant',
     },
   ]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [userData, setUserData] = useState([]);
   const scrollViewRef = useRef();
 
-  const handleSend = () => {
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  const loadUserData = async () => {
+    try {
+      const data = await getCleanedData();
+      setUserData(data);
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    }
+  };
+
+  const handleSend = async () => {
     if (inputText.trim().length === 0) return;
 
     const newMessage = {
@@ -80,22 +99,79 @@ const ImprovementScreen = () => {
     setInputText('');
     setIsTyping(true);
 
-    setTimeout(() => {
-      setIsTyping(false);
-      const responses = [
-          "That's a great question! Cal Career is here to help you advance your professional journey.",
-          "I'd be happy to help you with that. Career development is what I specialize in.",
-          "Here's what I recommend based on current industry trends and best practices.",
-          "That's an interesting perspective. Let me share some career insights that might be helpful.",
-          "Great point! Building your career strategically can really make a difference in your success."
-      ];
+    try {
+      // Create a context-aware system prompt
+      const systemPrompt = `You are Cal Career, a professional AI assistant specializing in career development for UC Berkeley students. You provide:
+
+1. Career advice and guidance
+2. Networking strategies
+3. Professional development tips
+4. Industry insights
+5. Resume and interview preparation
+6. LinkedIn optimization advice
+
+Keep responses concise, actionable, and encouraging. Use a friendly, professional tone. If the user asks about data or insights, you can reference that you have access to Berkeley student career data.`;
+
+      const response = await sendMessageToClaude(inputText, systemPrompt);
+      
       const assistantMessage = {
         id: messages.length + 2,
-        text: responses[Math.floor(Math.random() * responses.length)],
+        text: response,
         sender: 'assistant',
       };
       setMessages(prev => [...prev, assistantMessage]);
-    }, 1500 + Math.random() * 1000);
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+      
+      // Fallback response if API fails
+      const fallbackResponses = [
+        "I'm having trouble connecting to my AI brain right now, but I'd be happy to help you with career advice based on my knowledge!",
+        "Let me think about that... In the meantime, here's some general career advice: networking and continuous learning are key to professional success.",
+        "That's a great question! While I'm reconnecting, remember that building your personal brand and maintaining a strong LinkedIn presence are crucial for career growth."
+      ];
+      
+      const assistantMessage = {
+        id: messages.length + 2,
+        text: fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)],
+        sender: 'assistant',
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const generatePersonalizedAdvice = async () => {
+    if (userData.length === 0) {
+      Alert.alert('No Data', 'Please wait for data to load before generating personalized advice.');
+      return;
+    }
+
+    setIsTyping(true);
+    
+    try {
+      const userProfile = {
+        university: 'UC Berkeley',
+        dataSource: 'LinkedIn profiles',
+        sampleSize: userData.length,
+      };
+      
+      const userHistory = userData.slice(0, 20); // Use first 20 entries for context
+      
+      const advice = await generateRecommendations(userProfile, userHistory);
+      
+      const adviceMessage = {
+        id: messages.length + 1,
+        text: `Here's some personalized advice based on Berkeley student data:\n\n${advice}`,
+        sender: 'assistant',
+      };
+      setMessages(prev => [...prev, adviceMessage]);
+    } catch (error) {
+      console.error('Error generating personalized advice:', error);
+      Alert.alert('Error', 'Failed to generate personalized advice. Please try again.');
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   useEffect(() => {
@@ -110,8 +186,25 @@ const ImprovementScreen = () => {
             keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 25}
         >
             <LinearGradient colors={['#0077b5', '#005582']} style={styles.header}>
-                <Text style={styles.headerTitle}>Cal Career</Text>
-                <Text style={styles.headerSubtitle}>Your professional AI assistant</Text>
+                <View style={styles.headerContent}>
+                    <TouchableOpacity 
+                        style={styles.backButton} 
+                        onPress={() => navigation.goBack()}
+                    >
+                        <Text style={styles.backButtonText}>←</Text>
+                    </TouchableOpacity>
+                    <View style={styles.headerTextContainer}>
+                        <Text style={styles.headerTitle}>Cal Career</Text>
+                        <Text style={styles.headerSubtitle}>Your professional AI assistant</Text>
+                    </View>
+                    <TouchableOpacity 
+                        style={styles.adviceButton} 
+                        onPress={generatePersonalizedAdvice}
+                        disabled={isTyping}
+                    >
+                        <Text style={styles.adviceButtonText}>💡</Text>
+                    </TouchableOpacity>
+                </View>
             </LinearGradient>
             
             <ScrollView style={styles.messagesContainer} ref={scrollViewRef}>
@@ -161,6 +254,23 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     boxShadow: '0 2px 20px rgba(0, 119, 181, 0.3)',
   },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  backButton: {
+    padding: 8,
+  },
+  backButtonText: {
+    fontSize: 24,
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  headerTextContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
@@ -171,6 +281,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'white',
     opacity: 0.9,
+  },
+  adviceButton: {
+    padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
+  },
+  adviceButtonText: {
+    fontSize: 20,
   },
   messagesContainer: {
     flex: 1,
@@ -189,18 +307,21 @@ const styles = StyleSheet.create({
   },
   messageBubble: {
     maxWidth: '80%',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 18,
+    padding: 16,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   userBubble: {
     borderBottomRightRadius: 4,
   },
   assistantBubble: {
     borderBottomLeftRadius: 4,
-    backgroundColor: 'white',
     borderWidth: 1,
-    borderColor: '#e1e5e9'
+    borderColor: '#e0e0e0',
   },
   userMessageText: {
     color: 'white',
@@ -212,59 +333,64 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
   },
+  typingBubble: {
+    backgroundColor: '#f0f0f0',
+    padding: 16,
+    borderRadius: 20,
+    borderBottomLeftRadius: 4,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    maxWidth: '80%',
+  },
+  typingDots: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#999',
+  },
   inputContainer: {
     padding: 20,
+    paddingTop: 10,
     backgroundColor: 'white',
     borderTopWidth: 1,
-    borderColor: '#e1e5e9',
+    borderTopColor: '#e0e0e0',
   },
   inputWrapper: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     backgroundColor: '#f8f9fa',
-    borderRadius: 24,
-    paddingHorizontal: 8,
-    borderWidth: 2,
-    borderColor: '#e1e5e9',
+    borderRadius: 25,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   textInput: {
     flex: 1,
     fontSize: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    color: '#000',
+    color: '#333',
+    maxHeight: 100,
+    paddingVertical: 8,
   },
   sendButton: {
+    backgroundColor: '#0077b5',
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#0077b5',
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
   },
   sendButtonText: {
     color: 'white',
-    fontSize: 20,
-    transform: [{ rotate: '-45deg' }]
+    fontSize: 18,
+    fontWeight: 'bold',
   },
-  typingBubble: {
-      backgroundColor: 'white',
-      borderWidth: 1,
-      borderColor: '#e1e5e9',
-      borderRadius: 18,
-      borderBottomLeftRadius: 4,
-      padding: 12
-  },
-  typingDots: {
-      flexDirection: 'row',
-      gap: 4
-  },
-  dot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: '#0077b5'
-  }
 });
 
 export default ImprovementScreen; 

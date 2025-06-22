@@ -9,11 +9,33 @@ import ProfileScreen from './ProfileScreen';
 import ImprovementScreen from './ImprovementScreen';
 import SideBar from './SideBar';
 import LeaderboardScreen from './LeaderboardScreen';
+import InsightsScreen from './InsightsScreen';
 
 const Stack = createStackNavigator();
 const Drawer = createDrawerNavigator();
 
-const MainStackNavigator = () => {
+// Main app screens (after sign in)
+const MainAppNavigator = () => {
+  return (
+    <Drawer.Navigator 
+      drawerContent={props => <SideBar {...props} />}
+      screenOptions={{
+        headerShown: false,
+        drawerStyle: {
+          width: '80%',
+        }
+      }}
+    >
+      <Drawer.Screen name="Profile" component={ProfileScreen} />
+      <Drawer.Screen name="Improvement" component={ImprovementScreen} />
+      <Drawer.Screen name="Leaderboard" component={LeaderboardScreen} />
+      <Drawer.Screen name="Insights" component={InsightsScreen} />
+    </Drawer.Navigator>
+  );
+};
+
+// Root navigator with sign in flow
+const RootNavigator = () => {
   return (
     <Stack.Navigator initialRouteName="SignIn">
       <Stack.Screen 
@@ -22,38 +44,18 @@ const MainStackNavigator = () => {
         options={{ headerShown: false }} 
       />
       <Stack.Screen 
-        name="Profile" 
-        component={ProfileScreen} 
-        options={{ title: 'Profile' }}
-      />
-      <Stack.Screen 
-        name="Improvement" 
-        component={ImprovementScreen} 
-        options={{ headerShown: false }} 
-      />
-      <Stack.Screen 
-        name="Leaderboard" 
-        component={LeaderboardScreen} 
+        name="MainApp" 
+        component={MainAppNavigator} 
         options={{ headerShown: false }} 
       />
     </Stack.Navigator>
   );
-}
+};
 
 export default function App() {
   return (
     <NavigationContainer>
-      <Drawer.Navigator 
-        drawerContent={props => <SideBar {...props} />}
-        screenOptions={{
-          headerShown: false,
-          drawerStyle: {
-            width: '80%',
-          }
-        }}
-      >
-        <Drawer.Screen name="Main" component={MainStackNavigator} />
-      </Drawer.Navigator>
+      <RootNavigator />
     </NavigationContainer>
   );
 }

@@ -14,8 +14,8 @@ const SignInScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
 
   const handleSignIn = () => {
-    // Navigate to the Profile screen
-    navigation.navigate('Profile');
+    // Navigate to the main app (which contains Profile and other screens)
+    navigation.navigate('MainApp');
   };
 
   const handleAppleSignIn = () => {
