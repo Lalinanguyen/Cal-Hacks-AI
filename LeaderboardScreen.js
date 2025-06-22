@@ -1,24 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, StatusBar, ActivityIndicator } from 'react-native';
 import { Entypo } from '@expo/vector-icons';
-import { getCleanedData } from './cleaning'; // Import the function
+import { getRankedLeaderboardData } from './cleaning';
 
-const LeaderboardItem = ({ name, isFirst }) => (
+const LeaderboardItem = ({ user, rank }) => (
   <View style={styles.itemContainer}>
+    <Text style={styles.rank}>{rank}</Text>
     <View style={styles.profilePic} />
     <View style={styles.nameContainer}>
-      {isFirst && <Text style={styles.nameLabel}>Name</Text>}
+      <Text style={styles.nameLabel} numberOfLines={1}>{user.Name}</Text>
     </View>
+    <Text style={styles.score}>{user.score}</Text>
   </View>
 );
 
 const LeaderboardScreen = ({ navigation }) => {
   const [leaderboardData, setLeaderboardData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
-      const data = await getCleanedData();
+      setIsLoading(true);
+      const data = await getRankedLeaderboardData();
       setLeaderboardData(data);
+      setIsLoading(false);
     };
     loadData();
   }, []);
@@ -33,11 +38,24 @@ const LeaderboardScreen = ({ navigation }) => {
         <Text style={styles.headerTitle}>Leaderboard</Text>
         <View style={{ width: 24 }} />
       </View>
-      <ScrollView contentContainerStyle={styles.container}>
-        {leaderboardData.map((item, index) => (
-          <LeaderboardItem key={index} name={item.Name} isFirst={index === 0} />
-        ))}
-      </ScrollView>
+      
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#005582" />
+          <Text style={styles.loadingText}>Ranking students with AI...</Text>
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={styles.container}>
+          {leaderboardData.map((item, index) => {
+            // Check for a tie with the previous item
+            const isTie = index > 0 && item.score === leaderboardData[index - 1].score;
+            // Determine the rank text
+            const rankText = isTie ? 'Tie' : index + 1;
+            
+            return <LeaderboardItem key={index} user={item} rank={rankText} />;
+          })}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 };
@@ -61,6 +79,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#005582',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#005582',
+  },
   container: {
     padding: 20,
   },
@@ -69,30 +97,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
+  rank: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#666',
+    width: 40,
+    textAlign: 'center',
+  },
   profilePic: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#e0e0e0',
     marginRight: 15,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
   },
   nameContainer: {
     flex: 1,
-    height: 50,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    justifyContent: 'center',
-    paddingHorizontal: 15,
   },
   nameLabel: {
     color: '#333',
     fontSize: 16,
+  },
+  score: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#005582',
   },
 });
 

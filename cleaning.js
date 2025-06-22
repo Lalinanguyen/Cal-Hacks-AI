@@ -1,5 +1,6 @@
 import Papa from 'papaparse';
 import { Asset } from 'expo-asset';
+import { getAIRankedScore } from './CSRanking';
 
 // --- Configuration ---
 // The name of the column you want to use to identify duplicates.
@@ -13,52 +14,64 @@ const SORT_BY_COLUMN = 'Name';
 const SORT_ORDER = 'asc';
 
 /**
- * Reads and processes the CSV data from the specified file path.
+ * Processes the CSV file, gets an AI-generated score for each unique user,
+ * and sorts them to create a ranked leaderboard.
  *
- * @returns {Promise<Array>} A promise that resolves with an array of cleaned and sorted data objects.
+ * @returns {Promise<Array>} A promise that resolves with the final ranked leaderboard data.
  */
-export const getCleanedData = async () => {
+export const getRankedLeaderboardData = async () => {
   try {
-    // In React Native, we load the asset first
     const asset = Asset.fromModule(require('./assets/allcsdata.csv'));
-    await asset.downloadAsync(); // Optional, but ensures it's available
-
+    await asset.downloadAsync();
     const response = await fetch(asset.uri);
     const csvString = await response.text();
 
     return new Promise((resolve, reject) => {
       Papa.parse(csvString, {
-        header: true, // Treat the first row as headers
+        header: true,
         skipEmptyLines: true,
-        complete: (results) => {
-          // --- 1. Remove Duplicates ---
-          const uniqueData = [];
-          const seen = new Set();
-          
-          results.data.forEach(row => {
-            const identifier = row[DUPLICATE_CHECK_COLUMN];
-            if (!seen.has(identifier)) {
-              seen.add(identifier);
-              uniqueData.push(row);
-            }
-          });
+        complete: async (results) => {
+          try {
+            // --- 1. Remove Duplicates (based on the 'Name' column) ---
+            const uniqueData = [];
+            const seen = new Set();
+            results.data.forEach(row => {
+              const identifier = row['Name'];
+              if (identifier && !seen.has(identifier)) {
+                seen.add(identifier);
+                uniqueData.push(row);
+              }
+            });
 
-          // --- 2. Sort Data ---
-          uniqueData.sort((a, b) => {
-            const valA = a[SORT_BY_COLUMN];
-            const valB = b[SORT_BY_COLUMN];
+            // --- 2. Get AI Score for each user ---
+            console.log(`Getting AI scores for ${uniqueData.length} users...`);
+            const scoredDataPromises = uniqueData.map(user => {
+                // We construct a 'profile' object from the CSV row for the AI.
+                // NOTE: This assumes your CSV has 'Experience', 'Education', and 'Skills' columns.
+                // If your columns are named differently, you'll need to update them here.
+                const profile = {
+                    experience: [{ text: user.Experience || '' }],
+                    education: [{ text: user.Education || '' }],
+                    skills: user.Skills ? user.Skills.split(',').map(s => s.trim()) : []
+                };
+                
+                return getAIRankedScore(profile).then(score => ({
+                    ...user,
+                    score: score, // Add the new AI score to the user object
+                }));
+            });
 
-            if (valA < valB) {
-              return SORT_ORDER === 'asc' ? -1 : 1;
-            }
-            if (valA > valB) {
-              return SORT_ORDER === 'asc' ? 1 : -1;
-            }
-            return 0;
-          });
+            const scoredData = await Promise.all(scoredDataPromises);
+            console.log('All AI scores received.');
 
-          console.log('Data processed successfully!');
-          resolve(uniqueData);
+            // --- 3. Sort by Score (Best to Worst) ---
+            scoredData.sort((a, b) => b.score - a.score);
+
+            resolve(scoredData);
+          } catch (error) {
+            console.error('Error during AI scoring:', error);
+            reject(error);
+          }
         },
         error: (error) => {
           console.error('Error parsing CSV:', error);
@@ -67,8 +80,7 @@ export const getCleanedData = async () => {
       });
     });
   } catch (error) {
-    console.error('Error reading the CSV file:', error);
-    // Returning an empty array in case of an error.
-    return [];
+    console.error('Error reading or processing the CSV file:', error);
+    return []; // Return empty array on failure
   }
 }; 
