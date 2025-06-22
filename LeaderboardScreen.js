@@ -4,6 +4,7 @@ import { Entypo } from '@expo/vector-icons';
 import { getCleanedData, getTopPerformers } from './cleaning.js';
 import { storeUserAnalysis, getClaudeResponsesByType } from './claudeStorageService';
 import { getClaudeRanking, getClaudeIndustryInsights } from './claudeRankingService';
+import { getStoredLinkedInProfile } from './linkedinService';
 
 const LeaderboardItem = ({ item, index, isFirst, useClaudeRanking }) => {
   const [imageError, setImageError] = useState(false);
@@ -95,6 +96,29 @@ const LeaderboardItem = ({ item, index, isFirst, useClaudeRanking }) => {
   );
 };
 
+// Utility: Convert profile data to leaderboard format
+const profileToLeaderboardFormat = (profile) => {
+  if (!profile) return null;
+  return {
+    Name: profile.name || `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || 'User',
+    Title: profile.title || profile.headline || '',
+    Company: profile.company || '',
+    Major: profile.major || '',
+    LinkedInConnections: profile.connections || profile.LinkedInConnections || 0,
+    Skills: Array.isArray(profile.skills) ? profile.skills.join(',') : (profile.skills || ''),
+    ProfileImageURL: profile.profilePicture || profile.ProfileImageURL || '',
+    image: profile.profilePicture || profile.ProfileImageURL || '',
+    Score: profile.score || 0,
+    Rank: profile.rank || 0,
+    Location: profile.location || '',
+    Experience: Array.isArray(profile.experience)
+      ? profile.experience.map(e => e.text).join(', ')
+      : (profile.experience || ''),
+    GraduationYear: profile.graduationYear || profile.GraduationYear || '',
+    // Add any other fields as needed
+  };
+};
+
 const LeaderboardScreen = ({ navigation }) => {
   const [leaderboardData, setLeaderboardData] = useState([]);
   const [claudeRankedData, setClaudeRankedData] = useState([]); // New state for Claude-ranked data
@@ -118,62 +142,80 @@ const LeaderboardScreen = ({ navigation }) => {
       // Use getCleanedData to get properly cleaned, scored, and ranked data
       const cleanedData = await getCleanedData();
       
+      // Fetch the user's profile (from storage or mock)
+      let userProfile = null;
+      try {
+        const storedResult = await getStoredLinkedInProfile();
+        if (storedResult.success && storedResult.profile) {
+          userProfile = storedResult.profile;
+        } else {
+          // Fallback to mock profile (same as ProfileScreen)
+          userProfile = {
+            id: 'mock-profile-id',
+            firstName: 'John',
+            lastName: 'Doe',
+            name: 'John Doe',
+            title: 'Software Engineer at Berkeley',
+            headline: 'Software Engineer at Berkeley',
+            profilePicture: 'https://picsum.photos/200/200?random=1',
+            secondaryPicture: 'https://picsum.photos/80/80?random=2',
+            connectionsPicture: 'https://picsum.photos/60/60?random=3',
+            email: 'john.doe@berkeley.edu',
+            industry: 'Technology',
+            location: 'San Francisco Bay Area',
+            summary: 'Passionate software engineer with experience in React Native, Python, and machine learning. Currently studying Computer Science at UC Berkeley and working on innovative mobile applications.',
+            experience: [
+              { id: 1, logo: 'https://picsum.photos/60/60?random=4', text: 'Software Engineer Intern at Google' },
+              { id: 2, logo: 'https://picsum.photos/60/60?random=5', text: 'Full Stack Developer at Berkeley Startup' },
+              { id: 3, logo: 'https://picsum.photos/60/60?random=6', text: 'Research Assistant at UC Berkeley' },
+            ],
+            education: [
+              { id: 1, logo: 'https://picsum.photos/60/60?random=7', text: 'B.S. in Computer Science at UC Berkeley' },
+              { id: 2, logo: 'https://picsum.photos/60/60?random=8', text: 'High School Diploma at Berkeley High' },
+            ],
+            skills: ['React Native', 'Python', 'JavaScript', 'Machine Learning', 'Node.js', 'AWS', 'Git'],
+            connections: 450,
+            fetchedAt: new Date().toISOString(),
+            graduationYear: '2025',
+          };
+        }
+      } catch (e) {
+        console.log('Failed to load user profile, using mock:', e);
+      }
+      const userAsLeaderboard = profileToLeaderboardFormat(userProfile);
+      
       if (cleanedData && cleanedData.length > 0) {
         console.log(`✅ Loaded ${cleanedData.length} cleaned student records`);
-        
-        // Transform data for display (add profile image URLs)
-        const transformedData = cleanedData.map(user => ({
+        // Get top 19 students
+        let top19 = cleanedData.slice(0, 19);
+        // Check if user is already in top 19 (by name, case-insensitive)
+        const userInTop19 = top19.some(
+          s => (s.Name || '').toLowerCase().trim() === (userAsLeaderboard.Name || '').toLowerCase().trim()
+        );
+        // If not, add user profile as the 20th entry
+        let combinedList = userInTop19 ? top19 : [...top19, userAsLeaderboard];
+        // Transform data for display (use actual LinkedIn images)
+        const transformedData = combinedList.map(user => ({
           ...user,
-          ProfileImageURL: `https://picsum.photos/200/200?random=${Math.floor(Math.random() * 1000)}`,
+          ProfileImageURL: user.image || user.ProfileImageURL || `https://picsum.photos/200/200?random=${Math.floor(Math.random() * 1000)}`,
         }));
-        
         setLeaderboardData(transformedData);
         setDataSource('real');
-        
-        // Try to get Claude analysis with top 99 + user profile
+        // Try to get Claude analysis with this list
         try {
           console.log('🤖 Attempting Claude API analysis...');
-          
-          // Get the user's profile (mock profile for now)
-          const userProfile = {
-            Name: 'John Doe',
-            Title: 'Software Engineer at Berkeley',
-            Company: 'Berkeley Startup',
-            Major: 'Computer Science',
-            LinkedInConnections: 450,
-            Skills: 'React Native,Python,JavaScript,Machine Learning,Node.js,AWS,Git',
-            ProfileImageURL: 'https://picsum.photos/200/200?random=1',
-            Score: 0,
-            Rank: 0,
-            Location: 'San Francisco Bay Area',
-            Experience: 'Software Engineer Intern at Google, Full Stack Developer at Berkeley Startup, Research Assistant at UC Berkeley',
-            GraduationYear: '2025'
-          };
-          
-          // Get top 19 students for Claude analysis (reduced to minimize token usage and rate limits)
-          const top19Students = await getTopPerformers(19);
-          
-          const rankingResult = await getClaudeRanking(top19Students, userProfile);
+          // Use the same combined list for Claude
+          const rankingResult = await getClaudeRanking(combinedList, userAsLeaderboard);
           if (rankingResult.success) {
             setClaudeRanking(rankingResult);
             console.log('✅ Claude ranking analysis successful');
-            
-            // Create Claude-ranked data if ranking is available
             if (rankingResult.ranking && rankingResult.ranking.rankings) {
-              console.log('🎯 Claude ranking result structure:', {
-                success: rankingResult.success,
-                hasRanking: !!rankingResult.ranking,
-                hasRankings: !!rankingResult.ranking.rankings,
-                rankingsLength: rankingResult.ranking.rankings?.length
-              });
-              
               // Create Claude-ranked data by combining original data with Claude's rankings
               const claudeData = rankingResult.ranking.rankings.map((rankedItem, index) => {
                 // Find the original student data
-                const originalItem = top19Students.find(item => 
+                const originalItem = combinedList.find(item => 
                   (item.Name || item.name || '').toLowerCase().trim() === (rankedItem.name || '').toLowerCase().trim()
                 );
-                
                 // If original item not found, create a basic item
                 const baseItem = originalItem || {
                   Name: rankedItem.name,
@@ -189,9 +231,9 @@ const LeaderboardScreen = ({ navigation }) => {
                   Experience: '',
                   GraduationYear: ''
                 };
-                
                 return {
                   ...baseItem,
+                  ProfileImageURL: baseItem.image || baseItem.ProfileImageURL,
                   ClaudeScore: rankedItem.score || 0,
                   ClaudeRank: rankedItem.rank || index + 1,
                   ClaudeReasoning: rankedItem.reasoning || '',
@@ -199,15 +241,8 @@ const LeaderboardScreen = ({ navigation }) => {
                   ClaudeAreasForImprovement: rankedItem.areas_for_improvement || []
                 };
               });
-              
-              console.log('📊 Created Claude data with', claudeData.length, 'students');
-              console.log('🔍 First Claude item:', claudeData[0]);
-              
               setClaudeRankedData(claudeData);
               setUseClaudeRanking(true);
-              
-              console.log('✅ State updated: useClaudeRanking = true, claudeRankedData set');
-              
               Alert.alert(
                 'Claude Analysis Complete',
                 `Claude AI has analyzed and ranked ${claudeData.length} students. The leaderboard now shows Claude's assessment.`,
@@ -215,8 +250,7 @@ const LeaderboardScreen = ({ navigation }) => {
               );
             }
           }
-          
-          const insightsResult = await getClaudeIndustryInsights(top19Students);
+          const insightsResult = await getClaudeIndustryInsights(combinedList);
           if (insightsResult.success) {
             setClaudeInsights(insightsResult);
             console.log('✅ Claude insights analysis successful');
@@ -224,16 +258,12 @@ const LeaderboardScreen = ({ navigation }) => {
         } catch (apiError) {
           console.log('⚠️ Claude API analysis failed, but real data is still available');
           console.log('API Error:', apiError.message);
-          // Continue with real data even if API fails
         }
       } else {
         throw new Error('No data found in cleaned dataset');
       }
-      
     } catch (error) {
       console.error('❌ Error loading cleaned data:', error);
-      
-      // Show error message instead of mock data
       Alert.alert(
         'Data Loading Error',
         'Unable to load Berkeley student data. Please check that berkeleyData.json exists and contains valid data.',
@@ -312,6 +342,7 @@ const LeaderboardScreen = ({ navigation }) => {
           
           return {
             ...baseItem,
+            ProfileImageURL: baseItem.image || baseItem.ProfileImageURL,
             ClaudeScore: rankedItem.score || 0,
             ClaudeRank: rankedItem.rank || index + 1,
             ClaudeReasoning: rankedItem.reasoning || '',

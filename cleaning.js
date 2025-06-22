@@ -205,17 +205,37 @@ const calculateEducationScore = (major, graduationYear) => {
  */
 const rankUsers = (users) => {
   // Calculate scores for all users
-  const usersWithScores = users.map(user => ({
-    ...user,
-    calculatedScore: calculateUserScore(user),
-    scoreBreakdown: {
-      connections: calculateConnectionScore(user.LinkedInConnections),
-      experience: calculateExperienceScore(user.Experience),
-      company: calculateCompanyScore(user.Company),
-      skills: calculateSkillsScore(user.Skills),
-      education: calculateEducationScore(user.Major, user.GraduationYear)
+  const usersWithScores = users.map(user => {
+    const calculatedScore = calculateUserScore(user);
+    
+    // Extract profile image from experience data
+    let profileImage = null;
+    if (user.Experience) {
+      try {
+        const experienceData = JSON.parse(user.Experience);
+        if (Array.isArray(experienceData) && experienceData.length > 0) {
+          // Use the first experience entry's company logo as profile image
+          profileImage = experienceData[0].company_logo || null;
+        }
+      } catch (error) {
+        console.log(`Failed to parse experience data for ${user.Name}:`, error);
+      }
     }
-  }));
+    
+    return {
+      ...user,
+      calculatedScore,
+      score: calculatedScore, // Add score property (same as calculatedScore)
+      image: profileImage, // Add image property
+      scoreBreakdown: {
+        connections: calculateConnectionScore(user.LinkedInConnections),
+        experience: calculateExperienceScore(user.Experience),
+        company: calculateCompanyScore(user.Company),
+        skills: calculateSkillsScore(user.Skills),
+        education: calculateEducationScore(user.Major, user.GraduationYear)
+      }
+    };
+  });
   
   // Sort by score (highest to lowest)
   usersWithScores.sort((a, b) => b.calculatedScore - a.calculatedScore);
@@ -225,7 +245,12 @@ const rankUsers = (users) => {
   let currentScore = null;
   let tieCount = 0;
   
-  usersWithScores.forEach((user, index) => {
+  // Limit to top 20 people
+  const maxIterations = Math.min(20, usersWithScores.length);
+  
+  for (let i = 0; i < maxIterations; i++) {
+    const user = usersWithScores[i];
+    
     if (currentScore !== null && user.calculatedScore === currentScore) {
       // This is a tie - use the same rank
       user.rank = currentRank;
@@ -241,9 +266,10 @@ const rankUsers = (users) => {
     
     currentScore = user.calculatedScore;
     user.rankBadge = getRankBadge(user.rank, user.isTie);
-  });
+  }
   
-  return usersWithScores;
+  // Return only the top 20 users
+  return usersWithScores.slice(0, maxIterations);
 };
 
 /**
@@ -369,9 +395,11 @@ export const getCleanedData = async () => {
     // Remove duplicates based on name
     const uniqueData = removeDuplicates(realData.default);
     
-    // The data is already ranked and scored, so we can return it directly
-    console.log('Data loaded and deduplicated successfully!');
-    return uniqueData;
+    // Rank and score the data to add image and score properties
+    const rankedData = rankUsers(uniqueData);
+    
+    console.log('Data loaded, deduplicated, and ranked successfully!');
+    return rankedData;
     
   } catch (error) {
     console.error('Error reading berkeleyData.json:', error);

@@ -14,8 +14,9 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
+import { Entypo } from '@expo/vector-icons';
 import { sendMessageToClaude, generateRecommendations } from './claudeAPI';
-import { getCleanedData } from './dataService';
+import { getCleanedData } from './cleaning.js';
 import { getClaudePersonalizedRecommendations, getClaudeUserAnalysis } from './claudeRankingService';
 
 const TypingIndicator = () => {
@@ -215,45 +216,40 @@ Keep responses concise, actionable, and encouraging. Use a friendly, professiona
   }, [messages, isTyping]);
   
   return (
-    <SafeAreaView style={{flex: 1, backgroundColor: '#fff'}}>
+    <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView 
             style={styles.container}
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 25}
         >
-            <LinearGradient colors={['#0077b5', '#005582']} style={styles.header}>
-                <View style={styles.headerContent}>
-                    <TouchableOpacity 
-                        style={styles.backButton} 
-                        onPress={() => navigation.goBack()}
-                    >
-                        <Text style={styles.backButtonText}>←</Text>
-                    </TouchableOpacity>
-                    <View style={styles.headerTextContainer}>
-                        <Text style={styles.headerTitle}>Cal Career</Text>
-                        <Text style={styles.headerSubtitle}>Your professional AI assistant</Text>
-                    </View>
-                    <TouchableOpacity 
-                        style={styles.adviceButton} 
-                        onPress={generatePersonalizedAdvice}
-                        disabled={isTyping}
-                    >
-                        <Text style={styles.adviceButtonText}>💡</Text>
-                    </TouchableOpacity>
+            <View style={styles.header}>
+                <TouchableOpacity 
+                    style={styles.sidebarButton} 
+                    onPress={() => navigation.openDrawer()}
+                >
+                    <Entypo name="dots-three-vertical" size={24} color="#005582" />
+                </TouchableOpacity>
+                <View style={styles.headerTextContainer}>
+                    <Text style={styles.headerTitle}>Cal Career</Text>
+                    <Text style={styles.headerSubtitle}>Your professional AI assistant</Text>
                 </View>
-            </LinearGradient>
+                <TouchableOpacity 
+                    style={styles.adviceButton} 
+                    onPress={generatePersonalizedAdvice}
+                    disabled={isTyping}
+                >
+                    <Text style={styles.adviceButtonText}>💡</Text>
+                </TouchableOpacity>
+            </View>
             
             <ScrollView style={styles.messagesContainer} ref={scrollViewRef}>
                 {messages.map(msg => (
                     <View key={msg.id} style={[styles.message, msg.sender === 'user' ? styles.userMessage : styles.assistantMessage]}>
-                        <LinearGradient 
-                            colors={msg.sender === 'user' ? ['#0077b5', '#0066a0'] : ['#ffffff', '#ffffff']}
-                            style={[styles.messageBubble, msg.sender === 'user' ? styles.userBubble : styles.assistantBubble]}
-                        >
+                        <View style={[styles.messageBubble, msg.sender === 'user' ? styles.userBubble : styles.assistantBubble]}>
                             <Text style={msg.sender === 'user' ? styles.userMessageText : styles.assistantMessageText}>
                                 {msg.text}
                             </Text>
-                        </LinearGradient>
+                        </View>
                     </View>
                 ))}
                 {isTyping && <TypingIndicator />}
@@ -285,51 +281,58 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa',
   },
   header: {
-    padding: 20,
-    paddingTop: 30,
-    paddingBottom: 20,
-    boxShadow: '0 2px 20px rgba(0, 119, 181, 0.3)',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    flex: 1,
   },
-  backButton: {
+  sidebarButton: {
     padding: 8,
-  },
-  backButtonText: {
-    fontSize: 24,
-    color: 'white',
-    fontWeight: 'bold',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 20,
   },
   headerTextContainer: {
     flex: 1,
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: 'white',
-    marginBottom: 8,
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#005582',
+    marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: 14,
-    color: 'white',
-    opacity: 0.9,
+    fontSize: 12,
+    color: '#666',
   },
   adviceButton: {
     padding: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#005582',
     borderRadius: 20,
   },
   adviceButtonText: {
     fontSize: 20,
+    color: 'white',
   },
   messagesContainer: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
   message: {
     marginBottom: 16,
@@ -344,17 +347,19 @@ const styles = StyleSheet.create({
   messageBubble: {
     maxWidth: '80%',
     padding: 16,
-    borderRadius: 20,
+    borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
   },
   userBubble: {
+    backgroundColor: '#005582',
     borderBottomRightRadius: 4,
   },
   assistantBubble: {
+    backgroundColor: '#fff',
     borderBottomLeftRadius: 4,
     borderWidth: 1,
     borderColor: '#e0e0e0',
@@ -370,13 +375,18 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   typingBubble: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#fff',
     padding: 16,
-    borderRadius: 20,
+    borderRadius: 12,
     borderBottomLeftRadius: 4,
     borderWidth: 1,
     borderColor: '#e0e0e0',
     maxWidth: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   typingDots: {
     flexDirection: 'row',
@@ -387,12 +397,12 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#999',
+    backgroundColor: '#005582',
   },
   inputContainer: {
-    padding: 20,
+    padding: 16,
     paddingTop: 10,
-    backgroundColor: 'white',
+    backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
   },
@@ -414,7 +424,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   sendButton: {
-    backgroundColor: '#0077b5',
+    backgroundColor: '#005582',
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -426,6 +436,10 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff',
   },
 });
 
