@@ -10,6 +10,7 @@ import ImprovementScreen from './ImprovementScreen';
 import SideBar from './SideBar';
 import LeaderboardScreen from './LeaderboardScreen';
 import InsightsScreen from './InsightsScreen';
+import ClaudeStorageScreen from './ClaudeStorageScreen';
 
 const Stack = createStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -30,6 +31,7 @@ const MainAppNavigator = () => {
       <Drawer.Screen name="Improvement" component={ImprovementScreen} />
       <Drawer.Screen name="Leaderboard" component={LeaderboardScreen} />
       <Drawer.Screen name="Insights" component={InsightsScreen} />
+      <Drawer.Screen name="ClaudeStorage" component={ClaudeStorageScreen} />
     </Drawer.Navigator>
   );
 };

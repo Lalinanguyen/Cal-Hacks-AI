@@ -39,6 +39,10 @@ const SideBar = ({ navigation }) => {
             <FontAwesome name="lightbulb-o" size={24} color="white" style={styles.icon} />
             <Text style={styles.menuText}>Insights</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ClaudeStorage')}>
+            <FontAwesome name="database" size={20} color="white" style={styles.icon} />
+            <Text style={styles.menuText}>Claude Storage</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </SafeAreaView>

@@ -12,7 +12,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Entypo, FontAwesome } from '@expo/vector-icons';
 import { getCleanedData } from './dataService';
-import { analyzeUserData, generateRecommendations } from './claudeService';
+import { analyzeUserData, generateRecommendations } from './claudeAPI';
 
 const InsightCard = ({ title, icon, children, gradientColors }) => (
   <View style={styles.card}>

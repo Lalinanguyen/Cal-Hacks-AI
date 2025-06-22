@@ -14,8 +14,9 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { sendMessageToClaude, generateRecommendations } from './claudeService';
+import { sendMessageToClaude, generateRecommendations } from './claudeAPI';
 import { getCleanedData } from './dataService';
+import { getClaudePersonalizedRecommendations, getClaudeUserAnalysis } from './claudeRankingService';
 
 const TypingIndicator = () => {
   const dot1 = useRef(new Animated.Value(0)).current;
@@ -150,25 +151,60 @@ Keep responses concise, actionable, and encouraging. Use a friendly, professiona
     setIsTyping(true);
     
     try {
-      const userProfile = {
-        university: 'UC Berkeley',
-        dataSource: 'LinkedIn profiles',
-        sampleSize: userData.length,
-      };
+      // Get a sample user for personalized recommendations
+      const sampleUser = userData[Math.floor(Math.random() * Math.min(userData.length, 10))];
       
-      const userHistory = userData.slice(0, 20); // Use first 20 entries for context
+      console.log('🤖 Getting personalized recommendations from Claude...');
       
-      const advice = await generateRecommendations(userProfile, userHistory);
+      // Get personalized recommendations for the sample user
+      const recommendationsResult = await getClaudePersonalizedRecommendations(sampleUser);
+      
+      // Get detailed user analysis
+      const analysisResult = await getClaudeUserAnalysis(sampleUser);
+      
+      let adviceText = `Here's personalized advice based on Berkeley student data analysis:\n\n`;
+      
+      if (recommendationsResult.success) {
+        adviceText += `**Personalized Recommendations:**\n${recommendationsResult.recommendations}\n\n`;
+      }
+      
+      if (analysisResult.success) {
+        adviceText += `**Detailed Analysis:**\n${analysisResult.analysis}\n\n`;
+      }
+      
+      adviceText += `*Based on analysis of ${userData.length} Berkeley students' profiles*`;
       
       const adviceMessage = {
         id: messages.length + 1,
-        text: `Here's some personalized advice based on Berkeley student data:\n\n${advice}`,
+        text: adviceText,
         sender: 'assistant',
       };
       setMessages(prev => [...prev, adviceMessage]);
     } catch (error) {
       console.error('Error generating personalized advice:', error);
-      Alert.alert('Error', 'Failed to generate personalized advice. Please try again.');
+      
+      // Fallback to original method if Claude ranking fails
+      try {
+        const userProfile = {
+          university: 'UC Berkeley',
+          dataSource: 'LinkedIn profiles',
+          sampleSize: userData.length,
+        };
+        
+        const userHistory = userData.slice(0, 20); // Use first 20 entries for context
+        
+        const advice = await generateRecommendations(userProfile, userHistory);
+        
+        const adviceMessage = {
+          id: messages.length + 1,
+          text: `Here's some personalized advice based on Berkeley student data:\n\n${advice}`,
+          sender: 'assistant',
+        };
+        setMessages(prev => [...prev, adviceMessage]);
+      } catch (fallbackError) {
+        console.error('Fallback advice generation also failed:', fallbackError);
+        Alert.alert('Error', 'Failed to generate personalized advice. Please try again.');
+      }
     } finally {
       setIsTyping(false);
     }
