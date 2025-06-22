@@ -60,7 +60,7 @@ const ImprovementScreen = () => {
   const [messages, setMessages] = useState([
     {
       id: 1,
-      text: "Hello! I'm your Cal Career assistant. I can help you with networking, career advice, content creation, and professional insights. Let me help you rank up!",
+      text: "Hello! I'm your Cal Career assistant, powered by Claude. How can I help you rank up?",
       sender: 'assistant',
     },
   ]);
@@ -68,34 +68,62 @@ const ImprovementScreen = () => {
   const [isTyping, setIsTyping] = useState(false);
   const scrollViewRef = useRef();
 
-  const handleSend = () => {
+  const getClaudeResponse = async (prompt) => {
+    const apiKey = process.env.EXPO_PUBLIC_CLAUDE_API_KEY;
+
+    if (!apiKey) {
+      return "API key is not set. Please create a .env file with your key.";
+    }
+
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: "claude-3-haiku-20240307",
+          max_tokens: 1024,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.content && data.content.length > 0) {
+        return data.content[0].text;
+      } else {
+        return "I received an unexpected response. Please try again.";
+      }
+    } catch (error) {
+      console.error("Error fetching from Claude API:", error);
+      return "Sorry, I couldn't connect to the AI service.";
+    }
+  };
+
+  const handleSend = async () => {
     if (inputText.trim().length === 0) return;
 
-    const newMessage = {
+    const userMessage = {
       id: messages.length + 1,
       text: inputText,
       sender: 'user',
     };
-    setMessages(prev => [...prev, newMessage]);
+    setMessages(prev => [...prev, userMessage]);
     setInputText('');
     setIsTyping(true);
 
-    setTimeout(() => {
-      setIsTyping(false);
-      const responses = [
-          "That's a great question! Cal Career is here to help you advance your professional journey.",
-          "I'd be happy to help you with that. Career development is what I specialize in.",
-          "Here's what I recommend based on current industry trends and best practices.",
-          "That's an interesting perspective. Let me share some career insights that might be helpful.",
-          "Great point! Building your career strategically can really make a difference in your success."
-      ];
-      const assistantMessage = {
-        id: messages.length + 2,
-        text: responses[Math.floor(Math.random() * responses.length)],
-        sender: 'assistant',
-      };
-      setMessages(prev => [...prev, assistantMessage]);
-    }, 1500 + Math.random() * 1000);
+    const assistantResponse = await getClaudeResponse(inputText);
+    setIsTyping(false);
+
+    const assistantMessage = {
+      id: messages.length + 2,
+      text: assistantResponse,
+      sender: 'assistant',
+    };
+    setMessages(prev => [...prev, assistantMessage]);
   };
 
   useEffect(() => {
