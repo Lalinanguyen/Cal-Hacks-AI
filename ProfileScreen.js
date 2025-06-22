@@ -25,13 +25,16 @@ const InfoCard = ({ item }) => (
   </View>
 );
 
-const ProfileScreen = ({ navigation }) => {
-  const [profileData, setProfileData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+const ProfileScreen = ({ navigation, route }) => {
+  const profileProp = route?.params?.profile;
+  const [profileData, setProfileData] = useState(profileProp || null);
+  const [isLoading, setIsLoading] = useState(!profileProp);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    loadProfileData();
+    if (!profileProp) {
+      loadProfileData();
+    }
   }, []);
 
   const loadProfileData = async () => {
@@ -146,7 +149,7 @@ const ProfileScreen = ({ navigation }) => {
           <TouchableOpacity onPress={() => navigation.openDrawer()}>
             <Entypo name="dots-three-vertical" size={24} color="#003262" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Your Profile</Text>
+          <Text style={styles.headerTitle}>{profileProp ? 'Profile' : 'Your Profile'}</Text>
           <View style={{ width: 24 }} />
         </View>
         <View style={styles.loadingContainer}>
@@ -166,10 +169,13 @@ const ProfileScreen = ({ navigation }) => {
         <TouchableOpacity onPress={() => navigation.openDrawer()}>
           <Entypo name="dots-three-vertical" size={24} color="#003262" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Your Profile</Text>
-        <TouchableOpacity onPress={refreshProfile} disabled={isRefreshing}>
-          <Entypo name="cycle" size={24} color="#003262" />
-        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{profileProp ? 'Profile' : 'Your Profile'}</Text>
+        {!profileProp && (
+          <TouchableOpacity onPress={refreshProfile} disabled={isRefreshing}>
+            <Entypo name="cycle" size={24} color="#003262" />
+          </TouchableOpacity>
+        )}
+        {profileProp && <View style={{ width: 24 }} />}
       </View>
       
       <ScrollView 

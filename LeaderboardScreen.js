@@ -522,13 +522,17 @@ const LeaderboardScreen = ({ navigation }) => {
             )}
             
             {displayData.map((item, index) => (
-              <LeaderboardItem 
-                key={index} 
-                item={item}
-                index={index}
-                isFirst={index === 0}
-                useClaudeRanking={useClaudeRanking}
-              />
+              <TouchableOpacity
+                key={index}
+                onPress={() => navigation.navigate('OtherProfileScreen', { profile: item })}
+              >
+                <LeaderboardItem 
+                  item={item}
+                  index={index}
+                  isFirst={index === 0}
+                  useClaudeRanking={useClaudeRanking}
+                />
+              </TouchableOpacity>
             ))}
             
             <View style={styles.footer}>
