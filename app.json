@@ -1,8 +1,8 @@
 {
   "expo": {
     "name": "Cal-Hacks-AI",
-    "slug": "Cal-hacks-ai",
-    "scheme": "cal-hacks-ai",
+    "slug": "cal-hacks-ai",
+    "scheme": "calhacksai",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
@@ -10,7 +10,6 @@
       "**/*",
       "*.xlsx"
     ],
-    "scheme": "calhacksai",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.calhacksai.app"
@@ -24,8 +23,14 @@
     "web": {
       "bundler": "metro"
     },
+    "sdkVersion": "53.0.0",
+    "extra": {
+      "eas": {
+        "projectId": "43074009-5d69-4ca9-9208-fe30fcd9c21f"
+      }
+    },
     "plugins": [
       "expo-web-browser"
     ]
   }
-} 
+}

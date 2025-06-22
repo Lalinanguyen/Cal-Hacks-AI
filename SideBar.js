@@ -56,7 +56,7 @@ const SideBar = ({ navigation }) => {
             <View>
               <Text style={styles.username}>{getDisplayName()}</Text>
               <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-                <Text style={styles.viewProfile}>view profile</Text>
+                <Text style={styles.viewProfile}>View Profile</Text>
               </TouchableOpacity>
             </View>
           </View>

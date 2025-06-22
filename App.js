@@ -6,11 +6,13 @@ import { createDrawerNavigator } from '@react-navigation/drawer';
 
 import SignInScreen from './SignInScreen';
 import ProfileScreen from './ProfileScreen';
+import OtherProfileScreen from './OtherProfileScreen';
 import ImprovementScreen from './ImprovementScreen';
 import SideBar from './SideBar';
 import LeaderboardScreen from './LeaderboardScreen';
 import InsightsScreen from './InsightsScreen';
 import ClaudeStorageScreen from './ClaudeStorageScreen';
+import ClaudeAnalysisDetailScreen from './ClaudeAnalysisDetailScreen';
 
 const Stack = createStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -51,7 +53,16 @@ const RootNavigator = () => {
         options={{ headerShown: false }} 
       />
       <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
-      <Stack.Screen name="OtherProfileScreen" component={ProfileScreen} />
+      <Stack.Screen 
+        name="OtherProfileScreen" 
+        component={OtherProfileScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="ClaudeAnalysisDetail" 
+        component={ClaudeAnalysisDetailScreen}
+        options={{ headerShown: false }}
+      />
     </Stack.Navigator>
   );
 };

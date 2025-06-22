@@ -5,28 +5,28 @@ let currentProfile = null;
 let profileListeners = [];
 
 // Mock profile data as fallback
-const mockProfileData = {
+const mockProfile = {
   id: 'mock-profile-id',
   firstName: 'John',
   lastName: 'Doe',
   name: 'John Doe',
   title: 'Software Engineer at Berkeley',
   headline: 'Software Engineer at Berkeley',
-  profilePicture: 'https://picsum.photos/200/200?random=1',
-  secondaryPicture: 'https://picsum.photos/80/80?random=2',
-  connectionsPicture: 'https://picsum.photos/60/60?random=3',
+  profilePicture: null,
+  secondaryPicture: null,
+  connectionsPicture: null,
   email: 'john.doe@berkeley.edu',
   industry: 'Technology',
   location: 'San Francisco Bay Area',
   summary: 'Passionate software engineer with experience in React Native, Python, and machine learning. Currently studying Computer Science at UC Berkeley and working on innovative mobile applications.',
   experience: [
-    { id: 1, logo: 'https://picsum.photos/60/60?random=4', text: 'Software Engineer Intern at Google' },
-    { id: 2, logo: 'https://picsum.photos/60/60?random=5', text: 'Full Stack Developer at Berkeley Startup' },
-    { id: 3, logo: 'https://picsum.photos/60/60?random=6', text: 'Research Assistant at UC Berkeley' },
+    { id: 1, logo: null, text: 'Software Engineer Intern at Google' },
+    { id: 2, logo: null, text: 'Full Stack Developer at Berkeley Startup' },
+    { id: 3, logo: null, text: 'Research Assistant at UC Berkeley' },
   ],
   education: [
-    { id: 1, logo: 'https://picsum.photos/60/60?random=7', text: 'B.S. in Computer Science at UC Berkeley' },
-    { id: 2, logo: 'https://picsum.photos/60/60?random=8', text: 'High School Diploma at Berkeley High' },
+    { id: 1, logo: null, text: 'B.S. in Computer Science at UC Berkeley' },
+    { id: 2, logo: null, text: 'High School Diploma at Berkeley High' },
   ],
   skills: ['React Native', 'Python', 'JavaScript', 'Machine Learning', 'Node.js', 'AWS', 'Git'],
   connections: 450,
@@ -46,7 +46,7 @@ export const loadProfileData = async () => {
       currentProfile = storedResult.profile;
     } else {
       console.log('❌ No stored profile found, using mock profile data');
-      currentProfile = mockProfileData;
+      currentProfile = mockProfile;
     }
     
     // Notify all listeners
@@ -55,7 +55,7 @@ export const loadProfileData = async () => {
     return { success: true, profile: currentProfile };
   } catch (error) {
     console.error('❌ Error loading profile data:', error);
-    currentProfile = mockProfileData;
+    currentProfile = mockProfile;
     notifyProfileListeners();
     return { success: false, error: error.message, profile: currentProfile };
   }

@@ -6,10 +6,10 @@ import { storeUserAnalysis, getClaudeResponsesByType } from './claudeStorageServ
 import { getClaudeRanking, getClaudeIndustryInsights } from './claudeRankingService';
 import { getStoredLinkedInProfile } from './linkedinService';
 
-const LeaderboardItem = ({ item, index, isFirst, useClaudeRanking }) => {
+const LeaderboardItem = ({ item, index, isFirst, useClaudeRanking, navigation, totalStudents }) => {
+  const [expanded, setExpanded] = useState(false);
   const [imageError, setImageError] = useState(false);
   
-  // Generate a fallback color based on the name
   const getFallbackColor = (name) => {
     if (!name) return '#FF6B6B';
     const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F'];
@@ -30,9 +30,20 @@ const LeaderboardItem = ({ item, index, isFirst, useClaudeRanking }) => {
 
   const getDisplayRank = () => {
     if (useClaudeRanking && item.ClaudeRank) {
-      return getRankBadge(item.ClaudeRank);
+      return item.ClaudeRank;
     }
-    return getRankBadge(index + 1);
+    
+    // Check if this is the user's profile (John Doe or User)
+    const isUserProfile = item.Name === 'John Doe' || item.Name === 'User';
+    
+    if (isUserProfile && totalStudents) {
+      // Show user's rank out of total students in CSV
+      const userRank = item.Rank || item.rank || 1;
+      return `${userRank}/${totalStudents}`;
+    }
+    
+    // For other students, show their rank among top 20
+    return item.Rank || item.rank || index + 1;
   };
 
   // Ensure all text values are strings
@@ -44,19 +55,49 @@ const LeaderboardItem = ({ item, index, isFirst, useClaudeRanking }) => {
   const safeClaudeReasoning = item.ClaudeReasoning ? String(item.ClaudeReasoning) : null;
   const safeClaudeStrengths = Array.isArray(item.ClaudeStrengths) ? item.ClaudeStrengths : [];
 
+  // Get the best available image URL
+  const getImageUrl = () => {
+    // Only use actual profile images, no fallbacks
+    if (item.ProfileImageURL) {
+      return item.ProfileImageURL;
+    }
+    if (item.image) {
+      return item.image;
+    }
+    if (item.profilePicture) {
+      return item.profilePicture;
+    }
+    // Return null if no image available - will show placeholder
+    return null;
+  };
+  
+  const imageUrl = getImageUrl();
+
+  const handlePress = () => {
+    // Check if this is the user's profile (you can customize this logic)
+    const isUserProfile = item.Name === 'John Doe' || item.Name === 'User'; // Add your logic here
+    
+    if (isUserProfile) {
+      navigation.navigate('Profile');
+    } else {
+      navigation.navigate('OtherProfileScreen', { profile: item });
+    }
+  };
+
   return (
-    <View style={styles.itemContainer}>
+    <TouchableOpacity 
+      style={styles.itemContainer}
+      onPress={handlePress}
+      activeOpacity={0.7}
+    >
       <View style={styles.rankContainer}>
         <Text style={styles.rankText}>{getDisplayRank()}</Text>
-        {useClaudeRanking && item.ClaudeRank && (
-          <Text style={styles.claudeRankText}>Claude #{item.ClaudeRank}</Text>
-        )}
       </View>
       
       <View style={styles.profileContainer}>
-        {item.ProfileImageURL && !imageError ? (
+        {imageUrl && !imageError ? (
           <Image
-            source={{ uri: item.ProfileImageURL }}
+            source={{ uri: imageUrl }}
             style={styles.profileImage}
             onError={() => setImageError(true)}
           />
@@ -92,7 +133,7 @@ const LeaderboardItem = ({ item, index, isFirst, useClaudeRanking }) => {
           </Text>
         )}
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 
@@ -106,16 +147,14 @@ const profileToLeaderboardFormat = (profile) => {
     Major: profile.major || '',
     LinkedInConnections: profile.connections || profile.LinkedInConnections || 0,
     Skills: Array.isArray(profile.skills) ? profile.skills.join(',') : (profile.skills || ''),
-    ProfileImageURL: profile.profilePicture || profile.ProfileImageURL || '',
-    image: profile.profilePicture || profile.ProfileImageURL || '',
+    ProfileImageURL: profile.profilePicture || profile.ProfileImageURL || profile.image || '',
+    image: profile.profilePicture || profile.ProfileImageURL || profile.image || '',
     Score: profile.score || 0,
     Rank: profile.rank || 0,
     Location: profile.location || '',
-    Experience: Array.isArray(profile.experience)
-      ? profile.experience.map(e => e.text).join(', ')
-      : (profile.experience || ''),
+    Experience: profile.experience || '',
+    Education: profile.education || '',
     GraduationYear: profile.graduationYear || profile.GraduationYear || '',
-    // Add any other fields as needed
   };
 };
 
@@ -129,6 +168,8 @@ const LeaderboardScreen = ({ navigation }) => {
   const [claudeInsights, setClaudeInsights] = useState(null);
   const [claudeLoading, setClaudeLoading] = useState(false);
   const [useClaudeRanking, setUseClaudeRanking] = useState(false);
+  const [analysisSource, setAnalysisSource] = useState('none'); // 'fresh', 'stored', or 'none'
+  const [totalStudents, setTotalStudents] = useState(0); // Total number of students in CSV
 
   useEffect(() => {
     loadData();
@@ -149,34 +190,20 @@ const LeaderboardScreen = ({ navigation }) => {
         if (storedResult.success && storedResult.profile) {
           userProfile = storedResult.profile;
         } else {
-          // Fallback to mock profile (same as ProfileScreen)
+          // Fallback to mock profile if no stored profile
           userProfile = {
-            id: 'mock-profile-id',
-            firstName: 'John',
-            lastName: 'Doe',
-            name: 'John Doe',
-            title: 'Software Engineer at Berkeley',
-            headline: 'Software Engineer at Berkeley',
-            profilePicture: 'https://picsum.photos/200/200?random=1',
-            secondaryPicture: 'https://picsum.photos/80/80?random=2',
-            connectionsPicture: 'https://picsum.photos/60/60?random=3',
-            email: 'john.doe@berkeley.edu',
-            industry: 'Technology',
-            location: 'San Francisco Bay Area',
-            summary: 'Passionate software engineer with experience in React Native, Python, and machine learning. Currently studying Computer Science at UC Berkeley and working on innovative mobile applications.',
-            experience: [
-              { id: 1, logo: 'https://picsum.photos/60/60?random=4', text: 'Software Engineer Intern at Google' },
-              { id: 2, logo: 'https://picsum.photos/60/60?random=5', text: 'Full Stack Developer at Berkeley Startup' },
-              { id: 3, logo: 'https://picsum.photos/60/60?random=6', text: 'Research Assistant at UC Berkeley' },
-            ],
-            education: [
-              { id: 1, logo: 'https://picsum.photos/60/60?random=7', text: 'B.S. in Computer Science at UC Berkeley' },
-              { id: 2, logo: 'https://picsum.photos/60/60?random=8', text: 'High School Diploma at Berkeley High' },
-            ],
-            skills: ['React Native', 'Python', 'JavaScript', 'Machine Learning', 'Node.js', 'AWS', 'Git'],
-            connections: 450,
-            fetchedAt: new Date().toISOString(),
-            graduationYear: '2025',
+            Name: 'John Doe',
+            Title: 'Software Engineer at Berkeley',
+            Company: 'Berkeley Startup',
+            Major: 'Computer Science',
+            LinkedInConnections: 450,
+            Skills: 'React Native,Python,JavaScript,Machine Learning,Node.js,AWS,Git',
+            ProfileImageURL: null, // No random images
+            Score: 0,
+            Rank: 0,
+            Location: 'San Francisco Bay Area',
+            Experience: 'Software Engineer Intern at Google, Full Stack Developer at Berkeley Startup, Research Assistant at UC Berkeley',
+            GraduationYear: '2025'
           };
         }
       } catch (e) {
@@ -186,79 +213,44 @@ const LeaderboardScreen = ({ navigation }) => {
       
       if (cleanedData && cleanedData.length > 0) {
         console.log(`✅ Loaded ${cleanedData.length} cleaned student records`);
-        // Get top 19 students
-        let top19 = cleanedData.slice(0, 19);
-        // Check if user is already in top 19 (by name, case-insensitive)
-        const userInTop19 = top19.some(
-          s => (s.Name || '').toLowerCase().trim() === (userAsLeaderboard.Name || '').toLowerCase().trim()
+        
+        // Get the user's name for comparison
+        const userName = userAsLeaderboard.Name || '';
+        
+        // Find the user's true rank among all people in the CSV
+        const userRank = cleanedData.findIndex(
+          student => (student.Name || '').toLowerCase().trim() === userName.toLowerCase().trim()
+        ) + 1; // +1 because findIndex is 0-based
+        
+        // Update user's rank
+        userAsLeaderboard.Rank = userRank > 0 ? userRank : cleanedData.length + 1;
+        userAsLeaderboard.rank = userAsLeaderboard.Rank;
+        
+        // Filter out the current user from the data and get top 20
+        const filteredData = cleanedData.filter(
+          student => (student.Name || '').toLowerCase().trim() !== userName.toLowerCase().trim()
         );
-        // If not, add user profile as the 20th entry
-        let combinedList = userInTop19 ? top19 : [...top19, userAsLeaderboard];
-        // Transform data for display (use actual LinkedIn images)
-        const transformedData = combinedList.map(user => ({
-          ...user,
-          ProfileImageURL: user.image || user.ProfileImageURL || `https://picsum.photos/200/200?random=${Math.floor(Math.random() * 1000)}`,
-        }));
+        
+        // Get top 20 students (excluding the current user)
+        let top20 = filteredData.slice(0, 20);
+        
+        // Add the user to the leaderboard with their true rank
+        const combinedData = [...top20, userAsLeaderboard];
+        
+        // Transform data for display (ensure proper image mapping)
+        const transformedData = combinedData.map(user => {
+          // Use only actual profile images, no fallbacks
+          let profileImageURL = user.ProfileImageURL || user.image || user.profilePicture;
+          
+          return {
+            ...user,
+            ProfileImageURL: profileImageURL, // Keep as is, even if null
+          };
+        });
         setLeaderboardData(transformedData);
         setDataSource('real');
-        // Try to get Claude analysis with this list
-        try {
-          console.log('🤖 Attempting Claude API analysis...');
-          // Use the same combined list for Claude
-          const rankingResult = await getClaudeRanking(combinedList, userAsLeaderboard);
-          if (rankingResult.success) {
-            setClaudeRanking(rankingResult);
-            console.log('✅ Claude ranking analysis successful');
-            if (rankingResult.ranking && rankingResult.ranking.rankings) {
-              // Create Claude-ranked data by combining original data with Claude's rankings
-              const claudeData = rankingResult.ranking.rankings.map((rankedItem, index) => {
-                // Find the original student data
-                const originalItem = combinedList.find(item => 
-                  (item.Name || item.name || '').toLowerCase().trim() === (rankedItem.name || '').toLowerCase().trim()
-                );
-                // If original item not found, create a basic item
-                const baseItem = originalItem || {
-                  Name: rankedItem.name,
-                  Title: '',
-                  Company: '',
-                  Major: '',
-                  LinkedInConnections: 0,
-                  Skills: '',
-                  ProfileImageURL: `https://picsum.photos/200/200?random=${Math.floor(Math.random() * 1000)}`,
-                  Score: 0,
-                  Rank: 0,
-                  Location: '',
-                  Experience: '',
-                  GraduationYear: ''
-                };
-                return {
-                  ...baseItem,
-                  ProfileImageURL: baseItem.image || baseItem.ProfileImageURL,
-                  ClaudeScore: rankedItem.score || 0,
-                  ClaudeRank: rankedItem.rank || index + 1,
-                  ClaudeReasoning: rankedItem.reasoning || '',
-                  ClaudeStrengths: rankedItem.strengths || [],
-                  ClaudeAreasForImprovement: rankedItem.areas_for_improvement || []
-                };
-              });
-              setClaudeRankedData(claudeData);
-              setUseClaudeRanking(true);
-              Alert.alert(
-                'Claude Analysis Complete',
-                `Claude AI has analyzed and ranked ${claudeData.length} students. The leaderboard now shows Claude's assessment.`,
-                [{ text: 'OK' }]
-              );
-            }
-          }
-          const insightsResult = await getClaudeIndustryInsights(combinedList);
-          if (insightsResult.success) {
-            setClaudeInsights(insightsResult);
-            console.log('✅ Claude insights analysis successful');
-          }
-        } catch (apiError) {
-          console.log('⚠️ Claude API analysis failed, but real data is still available');
-          console.log('API Error:', apiError.message);
-        }
+        setTotalStudents(cleanedData.length);
+        // Note: Claude analysis is now only triggered manually via the "Get Claude AI Ranking" button
       } else {
         throw new Error('No data found in cleaned dataset');
       }
@@ -275,37 +267,146 @@ const LeaderboardScreen = ({ navigation }) => {
     }
   };
 
+  const loadStoredClaudeAnalysis = async () => {
+    try {
+      console.log('📱 Loading stored Claude analysis...');
+      
+      // Load stored ranking data
+      const storedRankings = await getClaudeResponsesByType('ranking');
+      if (storedRankings.length > 0) {
+        const latestRanking = storedRankings[storedRankings.length - 1];
+        setClaudeRanking(latestRanking.data);
+        
+        if (latestRanking.data.success && latestRanking.data.ranking && latestRanking.data.ranking.rankings) {
+          // Reconstruct Claude-ranked data from stored results
+          const claudeData = latestRanking.data.ranking.rankings.map((rankedItem, index) => {
+            return {
+              Name: rankedItem.name,
+              Title: '',
+              Company: '',
+              Major: '',
+              LinkedInConnections: 0,
+              Skills: '',
+              ProfileImageURL: null, // No fallback images
+              Score: 0,
+              Rank: 0,
+              Location: '',
+              Experience: '',
+              GraduationYear: '',
+              ClaudeScore: rankedItem.score || 0,
+              ClaudeRank: rankedItem.rank || index + 1,
+              ClaudeReasoning: rankedItem.reasoning || '',
+              ClaudeStrengths: rankedItem.strengths || [],
+              ClaudeAreasForImprovement: rankedItem.areas_for_improvement || []
+            };
+          });
+          setClaudeRankedData(claudeData);
+          setUseClaudeRanking(true);
+          setAnalysisSource('stored');
+          console.log('✅ Loaded stored Claude ranking with', claudeData.length, 'students');
+          
+          Alert.alert(
+            'Stored Analysis Loaded',
+            'Loaded previous Claude analysis successfully.',
+            [{ text: 'OK' }]
+          );
+        }
+      }
+      
+      // Load stored insights data
+      const storedInsights = await getClaudeResponsesByType('insights');
+      if (storedInsights.length > 0) {
+        const latestInsights = storedInsights[storedInsights.length - 1];
+        setClaudeInsights(latestInsights.data);
+        console.log('✅ Loaded stored Claude insights');
+      }
+      
+    } catch (error) {
+      console.log('⚠️ Failed to load stored Claude analysis:', error);
+    }
+  };
+
   const getClaudeAnalysis = async () => {
     try {
       setClaudeLoading(true);
       console.log('🤖 Getting Claude ranking analysis...');
       
-      // Get the user's profile (mock profile for now)
-      const userProfile = {
-        Name: 'John Doe',
-        Title: 'Software Engineer at Berkeley',
-        Company: 'Berkeley Startup',
-        Major: 'Computer Science',
-        LinkedInConnections: 450,
-        Skills: 'React Native,Python,JavaScript,Machine Learning,Node.js,AWS,Git',
-        ProfileImageURL: 'https://picsum.photos/200/200?random=1',
-        Score: 0,
-        Rank: 0,
-        Location: 'San Francisco Bay Area',
-        Experience: 'Software Engineer Intern at Google, Full Stack Developer at Berkeley Startup, Research Assistant at UC Berkeley',
-        GraduationYear: '2025'
-      };
+      // Get the user's real profile from storage
+      let userProfile = null;
+      try {
+        const storedResult = await getStoredLinkedInProfile();
+        if (storedResult.success && storedResult.profile) {
+          userProfile = storedResult.profile;
+        } else {
+          // Fallback to mock profile if no stored profile
+          userProfile = {
+            Name: 'John Doe',
+            Title: 'Software Engineer at Berkeley',
+            Company: 'Berkeley Startup',
+            Major: 'Computer Science',
+            LinkedInConnections: 450,
+            Skills: 'React Native,Python,JavaScript,Machine Learning,Node.js,AWS,Git',
+            ProfileImageURL: null, // No random images
+            Score: 0,
+            Rank: 0,
+            Location: 'San Francisco Bay Area',
+            Experience: 'Software Engineer Intern at Google, Full Stack Developer at Berkeley Startup, Research Assistant at UC Berkeley',
+            GraduationYear: '2025'
+          };
+        }
+      } catch (e) {
+        console.log('Failed to load user profile, using mock:', e);
+        userProfile = {
+          Name: 'John Doe',
+          Title: 'Software Engineer at Berkeley',
+          Company: 'Berkeley Startup',
+          Major: 'Computer Science',
+          LinkedInConnections: 450,
+          Skills: 'React Native,Python,JavaScript,Machine Learning,Node.js,AWS,Git',
+          ProfileImageURL: null, // No random images
+          Score: 0,
+          Rank: 0,
+          Location: 'San Francisco Bay Area',
+          Experience: 'Software Engineer Intern at Google, Full Stack Developer at Berkeley Startup, Research Assistant at UC Berkeley',
+          GraduationYear: '2025'
+        };
+      }
       
-      // Get top 19 students for Claude analysis (reduced to minimize token usage and rate limits)
-      const top19Students = await getTopPerformers(19);
+      // Convert user profile to leaderboard format
+      const userAsLeaderboard = profileToLeaderboardFormat(userProfile);
       
-      // Get Claude's ranking analysis with top 19 + user profile
-      const rankingResult = await getClaudeRanking(top19Students, userProfile);
+      // Get top 20 students from real Excel data (excluding the current user)
+      const allStudents = await getTopPerformers(50); // Get more to ensure we have enough after filtering
+      const userName = userAsLeaderboard.Name || '';
+      
+      // Filter out the current user and get top 20
+      const filteredStudents = allStudents.filter(
+        student => (student.Name || '').toLowerCase().trim() !== userName.toLowerCase().trim()
+      );
+      const top20Students = filteredStudents.slice(0, 20);
+      
+      // Combine top 20 students with user profile for Claude analysis
+      const studentsForClaude = [...top20Students, userAsLeaderboard];
+      
+      console.log('📊 Sending to Claude:', studentsForClaude.length, 'students (top 20 excluding user + user profile)');
+      
+      // Get Claude's ranking analysis with all 21 students (top 20 excluding user + user profile)
+      const rankingResult = await getClaudeRanking(studentsForClaude, userAsLeaderboard);
       setClaudeRanking(rankingResult);
       
-      // Get industry insights with top 19 students
-      const insightsResult = await getClaudeIndustryInsights(top19Students);
+      // Store ranking results
+      if (rankingResult.success) {
+        await storeUserAnalysis('ranking', rankingResult);
+      }
+      
+      // Get industry insights with all 20 students
+      const insightsResult = await getClaudeIndustryInsights(studentsForClaude);
       setClaudeInsights(insightsResult);
+      
+      // Store insights results
+      if (insightsResult.success) {
+        await storeUserAnalysis('insights', insightsResult);
+      }
       
       console.log('✅ Claude analysis completed');
       
@@ -320,9 +421,12 @@ const LeaderboardScreen = ({ navigation }) => {
         // Create Claude-ranked data by combining original data with Claude's rankings
         const claudeData = rankingResult.ranking.rankings.map((rankedItem, index) => {
           // Find the original student data
-          const originalItem = top19Students.find(item => 
+          const originalItem = studentsForClaude.find(item => 
             (item.Name || item.name || '').toLowerCase().trim() === (rankedItem.name || '').toLowerCase().trim()
           );
+          
+          // Use only actual profile images, no fallbacks
+          const profileImageURL = originalItem?.ProfileImageURL || originalItem?.image || originalItem?.profilePicture || null;
           
           // If original item not found, create a basic item
           const baseItem = originalItem || {
@@ -332,7 +436,7 @@ const LeaderboardScreen = ({ navigation }) => {
             Major: '',
             LinkedInConnections: 0,
             Skills: '',
-            ProfileImageURL: `https://picsum.photos/200/200?random=${Math.floor(Math.random() * 1000)}`,
+            ProfileImageURL: null, // No fallback images
             Score: 0,
             Rank: 0,
             Location: '',
@@ -342,7 +446,7 @@ const LeaderboardScreen = ({ navigation }) => {
           
           return {
             ...baseItem,
-            ProfileImageURL: baseItem.image || baseItem.ProfileImageURL,
+            ProfileImageURL: profileImageURL, // Use actual image or null
             ClaudeScore: rankedItem.score || 0,
             ClaudeRank: rankedItem.rank || index + 1,
             ClaudeReasoning: rankedItem.reasoning || '',
@@ -352,31 +456,69 @@ const LeaderboardScreen = ({ navigation }) => {
         });
         
         console.log('📊 Created Claude data with', claudeData.length, 'students');
+        console.log('🔍 Expected 20 students, got', claudeData.length, 'from Claude');
         console.log('🔍 First Claude item:', claudeData[0]);
         
         setClaudeRankedData(claudeData);
         setUseClaudeRanking(true);
+        setAnalysisSource('fresh');
         
         console.log('✅ State updated: useClaudeRanking = true, claudeRankedData set');
         
         Alert.alert(
           'Claude Analysis Complete',
-          `Claude AI has analyzed and ranked ${claudeData.length} students. The leaderboard now shows Claude's assessment.`,
+          `Claude AI has analyzed and ranked ${claudeData.length} students from your Excel data. The leaderboard now shows Claude's assessment.`,
           [{ text: 'OK' }]
         );
       } else {
-        console.log('⚠️ Claude ranking result structure issue:', {
-          success: rankingResult.success,
-          hasRanking: !!rankingResult.ranking,
-          hasRankings: !!rankingResult.ranking?.rankings,
-          rawResponse: rankingResult.rawResponse?.substring(0, 200) + '...'
-        });
-        
-        Alert.alert(
-          'Claude Analysis Complete',
-          'Claude AI has provided analysis, but the ranking format was not as expected. Check the insights below.',
-          [{ text: 'OK' }]
-        );
+        // --- NEW: Add robust fallback parsing ---
+        let parsedData = null;
+        if (rankingResult.rawResponse) {
+          try {
+            const jsonMatch = rankingResult.rawResponse.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              parsedData = JSON.parse(jsonMatch[0]);
+            }
+          } catch (e) {
+            console.error('Fallback parsing failed:', e);
+          }
+        }
+
+        if (parsedData && parsedData.rankings) {
+          console.log('✅ Successfully parsed with fallback logic.');
+          // Reprocess with the newly parsed data (this is a simplified version of the above success block)
+          const claudeData = parsedData.rankings.map((rankedItem, index) => {
+            const originalItem = studentsForClaude.find(item => 
+              (item.Name || item.name || '').toLowerCase().trim() === (rankedItem.name || '').toLowerCase().trim()
+            );
+            return {
+              ...(originalItem || { Name: rankedItem.name }),
+              ClaudeScore: rankedItem.score || 0,
+              ClaudeRank: rankedItem.rank || index + 1,
+              ClaudeReasoning: rankedItem.reasoning || '',
+              ClaudeStrengths: rankedItem.strengths || [],
+              ClaudeAreasForImprovement: rankedItem.areas_for_improvement || []
+            };
+          });
+          setClaudeRankedData(claudeData);
+          setUseClaudeRanking(true);
+          setAnalysisSource('fresh');
+          Alert.alert('Claude Analysis Complete', `Claude AI has ranked ${claudeData.length} students. The leaderboard is now updated.`);
+        } else {
+          // Original failure logic
+          console.log('⚠️ Claude ranking result structure issue, even after fallback:', {
+            success: rankingResult.success,
+            hasRanking: !!rankingResult.ranking,
+            hasRankings: !!rankingResult.ranking?.rankings,
+            rawResponse: rankingResult.rawResponse?.substring(0, 200) + '...'
+          });
+          
+          Alert.alert(
+            'Claude Analysis Complete',
+            'Claude AI has provided analysis, but the ranking format was not as expected. Check the insights below.',
+            [{ text: 'OK' }]
+          );
+        }
       }
       
     } catch (error) {
@@ -439,7 +581,8 @@ const LeaderboardScreen = ({ navigation }) => {
           {dataSource && (
             <Text style={styles.dataSourceText}>
               {dataSource === 'real' ? '📊 Real Data' : dataSource === 'mock' ? '⚠️ Sample Data' : '❌ Error'}
-              {useClaudeRanking && ' • 🤖 Claude Ranked'}
+              {useClaudeRanking && analysisSource === 'fresh' && ' • 🤖 Fresh Claude Analysis'}
+              {useClaudeRanking && analysisSource === 'stored' && ' • 📱 Stored Claude Analysis'}
             </Text>
           )}
         </View>
@@ -468,6 +611,14 @@ const LeaderboardScreen = ({ navigation }) => {
               </View>
             )}
             
+            {dataSource === 'real' && (
+              <View style={styles.successContainer}>
+                <Text style={styles.successText}>
+                  ✅ Using real data from ALLCSDATA.xlsx ({displayData.length} students)
+                </Text>
+              </View>
+            )}
+            
             <View style={styles.statsContainer}>
               <Text style={styles.statsTitle}>📈 Leaderboard Statistics</Text>
               <Text style={styles.statsText}>
@@ -480,29 +631,34 @@ const LeaderboardScreen = ({ navigation }) => {
             </View>
 
             {!useClaudeRanking && (
-              <TouchableOpacity 
-                style={styles.claudeButton} 
-                onPress={getClaudeAnalysis}
-                disabled={claudeLoading}
-              >
-                <Text style={styles.claudeButtonText}>
-                  {claudeLoading ? '🤖 Claude is analyzing...' : '🤖 Get Claude AI Ranking'}
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.claudeOptionsContainer}>
+                <TouchableOpacity 
+                  style={styles.claudeButton} 
+                  onPress={getClaudeAnalysis}
+                  disabled={claudeLoading}
+                >
+                  <Text style={styles.claudeButtonText}>
+                    {claudeLoading ? '🤖 Claude is analyzing...' : '🤖 Get Fresh Claude Analysis'}
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[styles.claudeButton, styles.loadStoredButton]} 
+                  onPress={loadStoredClaudeAnalysis}
+                >
+                  <Text style={styles.claudeButtonText}>
+                    📱 Load Previous Analysis
+                  </Text>
+                </TouchableOpacity>
+              </View>
             )}
 
             {useClaudeRanking && claudeInsights && (
               <View style={styles.insightsContainer}>
                 <Text style={styles.insightsTitle}>🤖 Claude's Industry Insights</Text>
-                <Text style={styles.insightsText} numberOfLines={3}>
+                <Text style={styles.insightsText}>
                   {claudeInsights.insights}
                 </Text>
-                <TouchableOpacity 
-                  style={styles.viewMoreButton}
-                  onPress={() => Alert.alert('Claude Insights', claudeInsights.insights)}
-                >
-                  <Text style={styles.viewMoreText}>View Full Insights</Text>
-                </TouchableOpacity>
               </View>
             )}
 
@@ -522,17 +678,15 @@ const LeaderboardScreen = ({ navigation }) => {
             )}
             
             {displayData.map((item, index) => (
-              <TouchableOpacity
+              <LeaderboardItem 
                 key={index}
-                onPress={() => navigation.navigate('OtherProfileScreen', { profile: item })}
-              >
-                <LeaderboardItem 
-                  item={item}
-                  index={index}
-                  isFirst={index === 0}
-                  useClaudeRanking={useClaudeRanking}
-                />
-              </TouchableOpacity>
+                item={item}
+                index={index}
+                isFirst={index === 0}
+                useClaudeRanking={useClaudeRanking}
+                navigation={navigation}
+                totalStudents={totalStudents}
+              />
             ))}
             
             <View style={styles.footer}>
@@ -736,17 +890,33 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
   },
-  claudeButton: {
-    padding: 16,
-    backgroundColor: '#005582',
-    borderRadius: 8,
+  claudeOptionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     margin: 16,
+    gap: 12,
+  },
+  claudeButton: {
+    backgroundColor: '#005582',
+    padding: 12,
+    marginBottom: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    flex: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  loadStoredButton: {
+    backgroundColor: '#6c757d',
   },
   claudeButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#fff',
-    textAlign: 'center',
   },
   insightsContainer: {
     backgroundColor: '#fff',
@@ -769,37 +939,40 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
-  viewMoreButton: {
-    padding: 16,
-    backgroundColor: '#005582',
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  viewMoreText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
-    textAlign: 'center',
-  },
-  claudeRankText: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: 'bold',
-  },
   claudeReasoningText: {
     fontSize: 12,
     color: '#666',
     fontStyle: 'italic',
+    marginTop: 4,
   },
   claudeStrengthsText: {
     fontSize: 12,
-    color: '#666',
-    fontWeight: 'bold',
+    color: '#28a745',
+    marginTop: 2,
   },
   originalScoreText: {
     fontSize: 12,
     color: '#666',
     fontStyle: 'italic',
+  },
+  successContainer: {
+    backgroundColor: '#dff0d8',
+    borderColor: '#d6e9c6',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    margin: 16,
+  },
+  successText: {
+    color: '#3c763d',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  insightsTimestamp: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
+    marginTop: 8,
   },
 });
 
