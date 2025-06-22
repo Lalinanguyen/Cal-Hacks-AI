@@ -1,7 +1,8 @@
 {
   "expo": {
     "name": "Cal-Hacks-AI",
-    "slug": "cal-hacks-ai",
+    "slug": "Cal-hacks-ai",
+    "scheme": "cal-hacks-ai",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",

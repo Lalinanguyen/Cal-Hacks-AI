@@ -14,7 +14,13 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Entypo } from '@expo/vector-icons';
-import { getStoredLinkedInProfile, getLinkedInProfile } from './linkedinService';
+import { 
+  getCurrentProfile, 
+  subscribeToProfile, 
+  loadProfileData, 
+  refreshProfile, 
+  connectLinkedIn 
+} from './profileService';
 
 const InfoCard = ({ item }) => (
   <View style={styles.cardContainer}>
@@ -31,72 +37,47 @@ const ProfileScreen = ({ navigation }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    loadProfileData();
+    loadProfileDataFromService();
   }, []);
 
-  const loadProfileData = async () => {
+  const loadProfileDataFromService = async () => {
     try {
       setIsLoading(true);
-      console.log('📊 Loading profile data...');
       
-      // First try to get stored profile data
-      const storedResult = await getStoredLinkedInProfile();
-      
-      if (storedResult.success && storedResult.profile) {
-        console.log('✅ Found stored LinkedIn profile');
-        setProfileData(storedResult.profile);
-      } else {
-        console.log('❌ No stored profile found, using mock profile data');
-        // Use mock profile data for testing
-        const mockProfileData = {
-          id: 'mock-profile-id',
-          firstName: 'John',
-          lastName: 'Doe',
-          name: 'John Doe',
-          title: 'Software Engineer at Berkeley',
-          headline: 'Software Engineer at Berkeley',
-          profilePicture: 'https://picsum.photos/200/200?random=1',
-          secondaryPicture: 'https://picsum.photos/80/80?random=2',
-          connectionsPicture: 'https://picsum.photos/60/60?random=3',
-          email: 'john.doe@berkeley.edu',
-          industry: 'Technology',
-          location: 'San Francisco Bay Area',
-          summary: 'Passionate software engineer with experience in React Native, Python, and machine learning. Currently studying Computer Science at UC Berkeley and working on innovative mobile applications.',
-          experience: [
-            { id: 1, logo: 'https://picsum.photos/60/60?random=4', text: 'Software Engineer Intern at Google' },
-            { id: 2, logo: 'https://picsum.photos/60/60?random=5', text: 'Full Stack Developer at Berkeley Startup' },
-            { id: 3, logo: 'https://picsum.photos/60/60?random=6', text: 'Research Assistant at UC Berkeley' },
-          ],
-          education: [
-            { id: 1, logo: 'https://picsum.photos/60/60?random=7', text: 'B.S. in Computer Science at UC Berkeley' },
-            { id: 2, logo: 'https://picsum.photos/60/60?random=8', text: 'High School Diploma at Berkeley High' },
-          ],
-          skills: ['React Native', 'Python', 'JavaScript', 'Machine Learning', 'Node.js', 'AWS', 'Git'],
-          connections: 450,
-          fetchedAt: new Date().toISOString()
-        };
-        setProfileData(mockProfileData);
+      // Get initial profile data from service
+      const currentProfile = getCurrentProfile();
+      if (currentProfile) {
+        setProfileData(currentProfile);
       }
+
+      // Subscribe to profile changes
+      const unsubscribe = subscribeToProfile((newProfile) => {
+        setProfileData(newProfile);
+      });
+
+      // Load profile data if not already loaded
+      if (!currentProfile) {
+        await loadProfileData();
+      }
+
+      // Cleanup subscription on unmount
+      return unsubscribe;
     } catch (error) {
       console.error('❌ Error loading profile data:', error);
       Alert.alert('Error', 'Failed to load profile data. Please try again.');
-      setProfileData(null);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const refreshProfile = async () => {
+  const handleRefreshProfile = async () => {
     try {
       setIsRefreshing(true);
-      console.log('🔄 Refreshing LinkedIn profile...');
       
-      // Try to get fresh LinkedIn profile data
-      const result = await getLinkedInProfile();
+      const result = await refreshProfile();
       
       if (result.success) {
         console.log('✅ Successfully refreshed LinkedIn profile');
-        setProfileData(result.profile);
         Alert.alert('Success', 'Profile refreshed successfully!');
       } else {
         console.log('❌ Failed to refresh profile:', result.error);
@@ -110,15 +91,12 @@ const ProfileScreen = ({ navigation }) => {
     }
   };
 
-  const connectLinkedIn = async () => {
+  const handleConnectLinkedIn = async () => {
     try {
-      console.log('🔗 Connecting to LinkedIn...');
-      
-      const result = await getLinkedInProfile();
+      const result = await connectLinkedIn();
       
       if (result.success) {
         console.log('✅ LinkedIn connection successful!');
-        setProfileData(result.profile);
         Alert.alert(
           'Success!',
           `Welcome ${result.profile.firstName} ${result.profile.lastName}! Your LinkedIn profile has been connected.`,
@@ -167,7 +145,7 @@ const ProfileScreen = ({ navigation }) => {
           <Entypo name="dots-three-vertical" size={24} color="#003262" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Your Profile</Text>
-        <TouchableOpacity onPress={refreshProfile} disabled={isRefreshing}>
+        <TouchableOpacity onPress={handleRefreshProfile} disabled={isRefreshing}>
           <Entypo name="cycle" size={24} color="#003262" />
         </TouchableOpacity>
       </View>
@@ -177,7 +155,7 @@ const ProfileScreen = ({ navigation }) => {
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
-            onRefresh={refreshProfile}
+            onRefresh={handleRefreshProfile}
             colors={['#005582']}
           />
         }
@@ -197,7 +175,7 @@ const ProfileScreen = ({ navigation }) => {
             <Text style={styles.linkedinPromptText}>
               🎭 Mock Profile Mode • Using sample data for testing
             </Text>
-            <TouchableOpacity style={styles.connectButton} onPress={connectLinkedIn}>
+            <TouchableOpacity style={styles.connectButton} onPress={handleConnectLinkedIn}>
               <Text style={styles.connectButtonText}>Try Real LinkedIn</Text>
             </TouchableOpacity>
           </View>

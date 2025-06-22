@@ -1,8 +1,37 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Platform, Image } from 'react-native';
 import { FontAwesome, Entypo } from '@expo/vector-icons';
+import { getCurrentProfile, subscribeToProfile } from './profileService';
 
 const SideBar = ({ navigation }) => {
+  const [profileData, setProfileData] = useState(null);
+
+  useEffect(() => {
+    // Get initial profile data
+    const currentProfile = getCurrentProfile();
+    if (currentProfile) {
+      setProfileData(currentProfile);
+    }
+
+    // Subscribe to profile changes
+    const unsubscribe = subscribeToProfile((newProfile) => {
+      setProfileData(newProfile);
+    });
+
+    // Cleanup subscription on unmount
+    return unsubscribe;
+  }, []);
+
+  const getDisplayName = () => {
+    if (!profileData) return 'Loading...';
+    return profileData.name || `${profileData.firstName || ''} ${profileData.lastName || ''}`.trim() || 'User';
+  };
+
+  const getProfileImage = () => {
+    if (!profileData) return null;
+    return profileData.profilePicture || profileData.secondaryPicture;
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#005582" />
@@ -10,10 +39,22 @@ const SideBar = ({ navigation }) => {
         <View style={styles.header}>
           <View style={styles.profileSection}>
             <TouchableOpacity style={styles.profilePic} onPress={() => navigation.navigate('Profile')}>
-              {/* Profile Picture Placeholder */}
+              {getProfileImage() ? (
+                <Image 
+                  source={{ uri: getProfileImage() }} 
+                  style={styles.profileImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={styles.profilePlaceholder}>
+                  <Text style={styles.profileInitial}>
+                    {getDisplayName().split(' ').map(n => n[0]).join('').toUpperCase()}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
             <View>
-              <Text style={styles.username}> UsernameInsert</Text>
+              <Text style={styles.username}>{getDisplayName()}</Text>
               <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
                 <Text style={styles.viewProfile}>view profile</Text>
               </TouchableOpacity>
@@ -52,7 +93,7 @@ const SideBar = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0066a0',
+    backgroundColor: '#005582',
   },
   content: {
     flex: 1,
@@ -73,7 +114,25 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
+    overflow: 'hidden',
+  },
+  profileImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+  },
+  profilePlaceholder: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: '#e0e0e0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileInitial: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#666',
   },
   username: {
     color: 'white',

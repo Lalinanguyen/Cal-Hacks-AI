@@ -1,6 +1,7 @@
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { CLIENT_ID, CLIENT_SECRET } from './env'; // Ensure you have your credentials in env.js
 
 // Complete the auth session
 WebBrowser.maybeCompleteAuthSession();
@@ -10,7 +11,7 @@ WebBrowser.maybeCompleteAuthSession();
  * You'll need to set up a LinkedIn app at: https://www.linkedin.com/developers/
  */
 const LINKEDIN_CONFIG = {
-  clientId: '86w7qwvb426drd', // Your actual LinkedIn Client ID
+  clientId: CLIENT_ID, // Your actual LinkedIn Client ID
   redirectUri: 'http://localhost:3000/linkedin-callback', // Use our callback server
   scopes: ['r_liteprofile', 'r_emailaddress'], // Basic profile and email permissions
   responseType: 'code',
@@ -23,7 +24,7 @@ const LINKEDIN_CONFIG = {
 const LINKEDIN_API = {
   authUrl: 'https://www.linkedin.com/oauth/v2/authorization',
   tokenUrl: 'https://www.linkedin.com/oauth/v2/accessToken',
-  profileUrl: 'https://api.linkedin.com/v2/me',
+  profileUrl: 'https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture(displayImage~:playableStreams))',
   emailUrl: 'https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))'
 };
 
@@ -64,11 +65,11 @@ class LinkedInService {
       
       // Create auth request URL
       const authUrl = `${LINKEDIN_API.authUrl}?` +
-        `response_type=${LINKEDIN_CONFIG.responseType}&` +
+        `response_type=code&` +
         `client_id=${LINKEDIN_CONFIG.clientId}&` +
         `redirect_uri=${encodeURIComponent(LINKEDIN_CONFIG.redirectUri)}&` +
         `scope=${encodeURIComponent(LINKEDIN_CONFIG.scopes.join(' '))}&` +
-        `state=${LINKEDIN_CONFIG.state}`;
+        `state=${LINKEDIN_CONFIG.state}`; // Use a secure random string in production
 
       console.log('🔗 Auth URL:', authUrl);
       
@@ -148,10 +149,10 @@ class LinkedInService {
         body: new URLSearchParams({
           grant_type: 'authorization_code',
           code: code,
-          client_id: LINKEDIN_CONFIG.clientId,
-          client_secret: 'WPL_AP1.1NTLBjOYTxjKmjBk.2lywUQ==', 
+          client_id: CLIENT_ID,
+          client_secret: CLIENT_SECRET,
           redirect_uri: LINKEDIN_CONFIG.redirectUri,
-        }),
+        }).toString(),
       });
 
       const tokenData = await tokenResponse.json();
@@ -293,32 +294,6 @@ class LinkedInService {
 export const linkedinService = new LinkedInService();
 
 /**
- * Helper function to get LinkedIn profile data
- */
-export const getLinkedInProfile = async () => {
-  try {
-    // Initialize service
-    const isInitialized = await linkedinService.initialize();
-    
-    if (!isInitialized || !linkedinService.isAuthenticated()) {
-      // Need to authenticate
-      const authResult = await linkedinService.authenticate();
-      if (!authResult.success) {
-        return { success: false, error: authResult.error };
-      }
-    }
-
-    // Get profile data
-    const profileResult = await linkedinService.getProfileData();
-    return profileResult;
-
-  } catch (error) {
-    console.error('❌ Error in getLinkedInProfile:', error);
-    return { success: false, error: error.message };
-  }
-};
-
-/**
  * Helper function to get stored profile data
  */
 export const getStoredLinkedInProfile = async () => {
@@ -328,6 +303,37 @@ export const getStoredLinkedInProfile = async () => {
     return { success: true, profile };
   } catch (error) {
     console.error('❌ Error getting stored profile:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Main function to get LinkedIn profile (authenticates if needed)
+ */
+export const getLinkedInProfile = async () => {
+  try {
+    await linkedinService.initialize();
+    
+    // Check if we already have profile data
+    const storedProfile = await linkedinService.getStoredProfile();
+    if (storedProfile) {
+      return { success: true, profile: storedProfile };
+    }
+    
+    // If not authenticated, try to authenticate
+    if (!linkedinService.isAuthenticated()) {
+      const authResult = await linkedinService.authenticate();
+      if (!authResult.success) {
+        return authResult;
+      }
+    }
+    
+    // Fetch fresh profile data
+    const profileResult = await linkedinService.getProfileData();
+    return profileResult;
+    
+  } catch (error) {
+    console.error('❌ Error getting LinkedIn profile:', error);
     return { success: false, error: error.message };
   }
 }; 
