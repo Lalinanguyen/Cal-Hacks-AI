@@ -52,20 +52,20 @@ class LinkedInService {
       const storedToken = await AsyncStorage.getItem('linkedin_access_token');
       if (storedToken) {
         this.accessToken = storedToken;
-        console.log('✅ Found stored LinkedIn access token');
+        console.log('Found stored LinkedIn access token');
         return true;
       }
       
       // Use existing token if available (for immediate testing)
       if (EXISTING_ACCESS_TOKEN) {
         this.accessToken = EXISTING_ACCESS_TOKEN;
-        console.log('✅ Using existing LinkedIn access token');
+        console.log('Using existing LinkedIn access token');
         return true;
       }
       
       return false;
     } catch (error) {
-      console.error('❌ Error initializing LinkedIn service:', error);
+      console.error('Error initializing LinkedIn service:', error);
       return false;
     }
   }
@@ -75,8 +75,8 @@ class LinkedInService {
    */
   async authenticate() {
     try {
-      console.log('🔐 Starting LinkedIn OAuth flow...');
-      console.log('🔗 Redirect URI:', LINKEDIN_CONFIG.redirectUri);
+      console.log('Starting LinkedIn OAuth flow...');
+      console.log('Redirect URI:', LINKEDIN_CONFIG.redirectUri);
       
       // Create auth request URL
       const authUrl = `${LINKEDIN_API.authUrl}?` +
@@ -108,20 +108,20 @@ class LinkedInService {
             return { success: true, accessToken: this.accessToken };
           }
         } else {
-          console.log('❌ No authorization code found in URL');
+          console.log('No authorization code found in URL');
         }
       } else if (result.type === 'cancel') {
-        console.log('❌ User cancelled OAuth flow');
+        console.log('User cancelled OAuth flow');
         return { success: false, error: 'Authentication cancelled by user' };
       } else {
-        console.log('❌ OAuth failed:', result.type);
+        console.log('OAuth failed:', result.type);
       }
 
-      console.log('❌ LinkedIn OAuth failed');
+      console.log('LinkedIn OAuth failed');
       return { success: false, error: 'Authentication failed' };
 
     } catch (error) {
-      console.error('❌ Error during LinkedIn authentication:', error);
+      console.error('Error during LinkedIn authentication:', error);
       return { success: false, error: error.message };
     }
   }
@@ -131,7 +131,7 @@ class LinkedInService {
    */
   extractCodeFromUrl(url) {
     try {
-      console.log('🔍 Extracting code from URL:', url);
+      console.log('Extracting code from URL:', url);
       
       // Handle both custom scheme and web URLs
       let urlObj;
@@ -149,20 +149,20 @@ class LinkedInService {
       const error = urlObj.searchParams.get('error');
       
       if (error) {
-        console.error('❌ OAuth error:', error);
+        console.error('OAuth error:', error);
         return null;
       }
       
       // Verify state parameter
       if (state !== LINKEDIN_CONFIG.state) {
-        console.error('❌ State parameter mismatch');
+        console.error('State parameter mismatch');
         return null;
       }
       
       console.log('✅ Code extracted successfully');
       return code;
     } catch (error) {
-      console.error('❌ Error extracting code from URL:', error);
+      console.error('Error extracting code from URL:', error);
       return null;
     }
   }
@@ -172,7 +172,7 @@ class LinkedInService {
    */
   async getAccessToken(code) {
     try {
-      console.log('🔄 Exchanging authorization code for access token...');
+      console.log('Exchanging authorization code for access token...');
       
       const tokenResponse = await fetch(LINKEDIN_API.tokenUrl, {
         method: 'POST',
@@ -189,22 +189,22 @@ class LinkedInService {
       });
 
       const tokenData = await tokenResponse.json();
-      console.log('🔍 Token response:', tokenData);
+      console.log('Token response:', tokenData);
       
       if (tokenData.access_token) {
         this.accessToken = tokenData.access_token;
         
         // Store the access token
         await AsyncStorage.setItem('linkedin_access_token', this.accessToken);
-        console.log('✅ LinkedIn access token stored successfully');
+        console.log('LinkedIn access token stored successfully');
         
         return true;
       } else {
-        console.error('❌ Failed to get access token:', tokenData);
+        console.error('Failed to get access token:', tokenData);
         return false;
       }
     } catch (error) {
-      console.error('❌ Error getting access token:', error);
+      console.error('Error getting access token:', error);
       return false;
     }
   }
@@ -214,7 +214,7 @@ class LinkedInService {
    */
   async getProfileData() {
     try {
-      console.log('📊 Fetching LinkedIn profile data...');
+      console.log('Fetching LinkedIn profile data...');
 
       // In a real implementation, this would:
       // 1. Use the access token to make API calls to LinkedIn
@@ -233,7 +233,7 @@ class LinkedInService {
       // Real LinkedIn API scraping function (would be used with proper permissions)
       const scrapeLinkedInProfile = async (accessToken) => {
         try {
-          console.log('🔗 Scraping LinkedIn profile with OpenID Connect...');
+          console.log('Scraping LinkedIn profile with OpenID Connect...');
           
           // Use the OpenID Connect userinfo endpoint
           const userinfoResponse = await fetch('https://api.linkedin.com/v2/userinfo', {
@@ -242,7 +242,7 @@ class LinkedInService {
             },
           });
           
-          console.log('🔍 Userinfo response status:', userinfoResponse.status);
+          console.log('Userinfo response status:', userinfoResponse.status);
           
           if (!userinfoResponse.ok) {
             const errorText = await userinfoResponse.text();
@@ -251,7 +251,7 @@ class LinkedInService {
           }
           
           const userinfo = await userinfoResponse.json();
-          console.log('✅ Userinfo data fetched:', userinfo);
+          console.log('Userinfo data fetched:', userinfo);
           
           // Construct the profile from the userinfo data.
           // NOTE: Experience, education, and skills are NOT available via this endpoint.
@@ -272,7 +272,7 @@ class LinkedInService {
             fetchedAt: new Date().toISOString()
           };
           
-          console.log('✅ Complete LinkedIn profile scraped:', scrapedProfile);
+          console.log('Complete LinkedIn profile scraped:', scrapedProfile);
           return scrapedProfile;
           
         } catch (error) {
@@ -284,14 +284,14 @@ class LinkedInService {
       // Try to scrape real LinkedIn data first
       if (this.accessToken) {
         try {
-          console.log('🔗 Attempting to scrape real LinkedIn profile...');
+          console.log('Attempting to scrape real LinkedIn profile...');
           const realProfile = await scrapeLinkedInProfile(this.accessToken);
-          console.log('✅ Successfully scraped real LinkedIn profile');
+          console.log('Successfully scraped real LinkedIn profile');
           this.userProfile = realProfile;
           await AsyncStorage.setItem('linkedin_profile_data', JSON.stringify(realProfile));
           return { success: true, profile: realProfile };
         } catch (scrapingError) {
-          console.log('⚠️ LinkedIn scraping failed, falling back to mock data:', scrapingError.message);
+          console.log('LinkedIn scraping failed, falling back to mock data:', scrapingError.message);
           // Fall back to mock data if scraping fails
         }
       }
@@ -352,13 +352,13 @@ I'm always excited to collaborate on interesting projects and connect with fello
         fetchedAt: new Date().toISOString()
       };
 
-      console.log('📊 Using mock LinkedIn profile data');
+      console.log('Using mock LinkedIn profile data');
       this.userProfile = mockProfile;
       await AsyncStorage.setItem('linkedin_profile_data', JSON.stringify(mockProfile));
       return { success: true, profile: mockProfile };
 
     } catch (error) {
-      console.error('❌ Error creating mock LinkedIn profile:', error);
+      console.error('Error creating mock LinkedIn profile:', error);
       return { success: false, error: error.message };
     }
   }
@@ -375,7 +375,7 @@ I'm always excited to collaborate on interesting projects and connect with fello
       }
       return null;
     } catch (error) {
-      console.error('❌ Error getting stored profile:', error);
+      console.error('Error getting stored profile:', error);
       return null;
     }
   }
@@ -389,10 +389,10 @@ I'm always excited to collaborate on interesting projects and connect with fello
       await AsyncStorage.removeItem('linkedin_profile_data');
       this.accessToken = null;
       this.userProfile = null;
-      console.log('✅ LinkedIn logout successful');
+      console.log('LinkedIn logout successful');
       return true;
     } catch (error) {
-      console.error('❌ Error during logout:', error);
+      console.error('Error during logout:', error);
       return false;
     }
   }
@@ -424,7 +424,7 @@ export const getStoredLinkedInProfile = async () => {
     const profile = await linkedinService.getStoredProfile();
     return { success: true, profile };
   } catch (error) {
-    console.error('❌ Error getting stored profile:', error);
+    console.error('Error getting stored profile:', error);
     return { success: false, error: error.message };
   }
 };
@@ -455,7 +455,7 @@ export const getLinkedInProfile = async () => {
     return profileResult;
     
   } catch (error) {
-    console.error('❌ Error getting LinkedIn profile:', error);
+    console.error('Error getting LinkedIn profile:', error);
     return { success: false, error: error.message };
   }
 }; 
