@@ -9,12 +9,12 @@ const SignInScreen = ({ navigation }) => {
   const handleLinkedInLogin = async () => {
     try {
       setLoading(true);
-      console.log('🔐 Starting LinkedIn login...');
+      console.log('Starting LinkedIn login...');
       
       const result = await getLinkedInProfile();
       
       if (result.success && result.profile) {
-        console.log('✅ LinkedIn login successful:', result.profile.name);
+        console.log('LinkedIn login successful:', result.profile.name);
         Alert.alert(
           'Success!', 
           `Welcome, ${result.profile.name}! Your profile has been loaded.\n\n💡 This is using sample LinkedIn data. You can customize it with your actual information in the code.`,
@@ -26,11 +26,11 @@ const SignInScreen = ({ navigation }) => {
           ]
         );
       } else {
-        console.log('❌ LinkedIn login failed:', result.error);
+        console.log('LinkedIn login failed:', result.error);
         Alert.alert('Login Failed', result.error || 'Failed to connect to LinkedIn');
       }
     } catch (error) {
-      console.error('❌ Error during LinkedIn login:', error);
+      console.error('Error during LinkedIn login:', error);
       Alert.alert('Error', 'An unexpected error occurred during login');
     } finally {
       setLoading(false);
