@@ -36,16 +36,16 @@ const mockProfile = {
 // Load profile data
 export const loadProfileData = async () => {
   try {
-    console.log('📊 Loading profile data...');
+    console.log('Loading profile data...');
     
     // First try to get stored profile data
     const storedResult = await getStoredLinkedInProfile();
     
     if (storedResult.success && storedResult.profile) {
-      console.log('✅ Found stored LinkedIn profile');
+      console.log('Found stored LinkedIn profile');
       currentProfile = storedResult.profile;
     } else {
-      console.log('❌ No stored profile found, using mock profile data');
+      console.log('No stored profile found, using mock profile data');
       currentProfile = mockProfile;
     }
     
@@ -54,7 +54,7 @@ export const loadProfileData = async () => {
     
     return { success: true, profile: currentProfile };
   } catch (error) {
-    console.error('❌ Error loading profile data:', error);
+    console.error('Error loading profile data:', error);
     currentProfile = mockProfile;
     notifyProfileListeners();
     return { success: false, error: error.message, profile: currentProfile };
@@ -75,21 +75,21 @@ export const updateProfile = (newProfile) => {
 // Refresh profile from LinkedIn
 export const refreshProfile = async () => {
   try {
-    console.log('🔄 Refreshing LinkedIn profile...');
+    console.log('Refreshing LinkedIn profile...');
     
     const result = await getLinkedInProfile();
     
     if (result.success) {
-      console.log('✅ Successfully refreshed LinkedIn profile');
+      console.log('Successfully refreshed LinkedIn profile');
       currentProfile = result.profile;
       notifyProfileListeners();
       return { success: true, profile: currentProfile };
     } else {
-      console.log('❌ Failed to refresh profile:', result.error);
+      console.log('Failed to refresh profile:', result.error);
       return { success: false, error: result.error };
     }
   } catch (error) {
-    console.error('❌ Error refreshing profile:', error);
+    console.error('Error refreshing profile:', error);
     return { success: false, error: error.message };
   }
 };
@@ -102,16 +102,16 @@ export const connectLinkedIn = async () => {
     const result = await getLinkedInProfile();
     
     if (result.success) {
-      console.log('✅ LinkedIn connection successful!');
+      console.log('LinkedIn connection successful!');
       currentProfile = result.profile;
       notifyProfileListeners();
       return { success: true, profile: currentProfile };
     } else {
-      console.log('❌ LinkedIn connection failed:', result.error);
+      console.log('LinkedIn connection failed:', result.error);
       return { success: false, error: result.error };
     }
   } catch (error) {
-    console.error('❌ Error connecting to LinkedIn:', error);
+    console.error('Error connecting to LinkedIn:', error);
     return { success: false, error: error.message };
   }
 };
