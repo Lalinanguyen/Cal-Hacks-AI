@@ -21,9 +21,9 @@ const sampleData = [
 const outputPath = path.join(__dirname, 'berkeleyData.json');
 fs.writeFileSync(outputPath, JSON.stringify(sampleData, null, 2));
 
-console.log(`✅ Data converted and saved to: ${outputPath}`);
-console.log(`📊 Sample data created with ${sampleData.length} entries`);
-console.log(`🔧 You can now replace this with your actual ALLCSDATA.xlsx content`);
+console.log(`Data converted and saved to: ${outputPath}`);
+console.log(`Sample data created with ${sampleData.length} entries`);
+console.log('You can now replace this with your actual ALLCSDATA.xlsx content`);
 
 // Instructions for manual conversion
 console.log(`
