@@ -1,21 +1,6 @@
 /**
  * linkedinScraper.js
- *
- * This file simulates a backend web scraping service. In a real-world application,
- * this logic would live on a server, be written in a language like Python (with
- * libraries like BeautifulSoup or Puppeteer), and would be called via an API endpoint.
- *
- * Why is this not a real scraper?
- * 1.  **Terms of Service:** Directly scraping LinkedIn's website is against their
- *     Terms of Service and can lead to IP bans or legal action.
- * 2.  **Technical Complexity:** Real web scraping is brittle. It requires handling
- *     logins, managing sessions, and parsing HTML that changes frequently.
- *     It cannot be reliably done from a mobile client.
- * 3.  **Security:** Exposing scraping logic on the client-side is insecure.
- *
- * This simulation provides a robust way to demonstrate the app's functionality
- * without violating ToS or building a complex backend.
- */
+
 
 // Simulates the detailed profile of Marcus Wong
 const marcusWongProfile = {
