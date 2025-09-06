@@ -3,18 +3,18 @@ import realBerkeleyData from './berkeley_students.json';
 
 // Load the raw data (using real data from JSON)
 const loadRawData = () => {
-  console.log('📊 Loading real Berkeley student data from JSON...');
+  console.log('Loading real Berkeley student data from JSON...');
   return realBerkeleyData;
 };
 
 // Clean and process the data
 const cleanData = (rawData) => {
   if (!rawData || !Array.isArray(rawData)) {
-    console.log('❌ Invalid raw data format');
+    console.log( Invalid raw data format');
     return [];
   }
 
-  console.log(`📊 Processing ${rawData.length} raw records...`);
+  console.log(`Processing ${rawData.length} raw records...`);
   
   const cleanedData = rawData
     .filter(item => item && item.Name) // Remove items without names
@@ -34,7 +34,7 @@ const cleanData = (rawData) => {
               .filter(logo => logo && logo.trim() !== '');
           }
         } catch (e) {
-          console.log(`⚠️ Could not parse Experience JSON for ${item.Name}:`, e.message);
+          console.log(`Could not parse Experience JSON for ${item.Name}:`, e.message);
         }
       }
 
@@ -61,18 +61,18 @@ const cleanData = (rawData) => {
     })
     .filter(item => item.LinkedInConnections > 0); // Only include people with connections
 
-  console.log(`✅ Cleaned ${cleanedData.length} records`);
+  console.log(`Cleaned ${cleanedData.length} records`);
   return cleanedData;
 };
 
 // Rank users by their LinkedIn connections and assign scores
 const rankUsers = (cleanedData) => {
   if (!cleanedData || cleanedData.length === 0) {
-    console.log('❌ No cleaned data to rank');
+    console.log('No cleaned data to rank');
     return [];
   }
 
-  console.log(`🏆 Ranking ${cleanedData.length} users...`);
+  console.log(`Ranking ${cleanedData.length} users...`);
 
   // Calculate scores based on LinkedIn connections
   const scoredData = cleanedData.map(user => {
@@ -99,14 +99,14 @@ const rankUsers = (cleanedData) => {
     });
   }
 
-  console.log(`✅ Ranked ${rankedData.length} top performers`);
+  console.log(`Ranked ${rankedData.length} top performers`);
   return rankedData;
 };
 
 // Main function to get cleaned and ranked data
 const getCleanedData = async () => {
   try {
-    console.log('🔄 Starting data cleaning process...');
+    console.log('Starting data cleaning process...');
     
     const rawData = loadRawData();
     if (!rawData) {
@@ -120,10 +120,10 @@ const getCleanedData = async () => {
 
     const rankedData = rankUsers(cleanedData);
     
-    console.log('✅ Data cleaning and ranking complete');
+    console.log('Data cleaning and ranking complete');
     return rankedData;
   } catch (error) {
-    console.error('❌ Error in getCleanedData:', error);
+    console.error('Error in getCleanedData:', error);
     throw error;
   }
 };
@@ -134,7 +134,7 @@ const getTopPerformers = async (limit = 20) => {
     const allData = await getCleanedData();
     return allData.slice(0, limit);
   } catch (error) {
-    console.error('❌ Error getting top performers:', error);
+    console.error('Error getting top performers:', error);
     return [];
   }
 };
